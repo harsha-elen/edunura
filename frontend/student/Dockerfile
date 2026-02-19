@@ -13,7 +13,7 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-ARG VITE_API_BASE_URL
+ARG VITE_API_BASE_URL=__VITE_API_BASE_URL__
 ARG VITE_BASE_PATH=/
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 ENV VITE_BASE_PATH=$VITE_BASE_PATH
@@ -47,3 +47,9 @@ RUN set -e; \
     fi
 
 EXPOSE 80
+
+# Entrypoint: injects VITE_API_BASE_URL at container startup
+# (VITE_BASE_PATH is already baked into nginx config and JS routing at build time)
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+CMD ["/docker-entrypoint.sh"]

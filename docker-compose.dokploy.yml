@@ -48,9 +48,7 @@ services:
   # ─── Backend API ───────────────────────────────────────────────────────────
   # Domain in Dokploy UI: api.yourdomain.com → port 5000
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: harshath/lms-backend:latest
     container_name: lms_backend
     restart: unless-stopped
     environment:
@@ -94,13 +92,11 @@ services:
   # ─── Landing Site (Next.js) ───────────────────────────────────────────────
   # Domain in Dokploy UI: yourdomain.com → port 3000
   landing:
-    build:
-      context: ./frontend/landing
-      dockerfile: Dockerfile
-      args:
-        NEXT_PUBLIC_API_URL: ${BACKEND_URL}
+    image: harshath/lms-landing:latest
     container_name: lms_landing
     restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: ${BACKEND_URL}
     expose:
       - "3000"
     networks:
@@ -109,13 +105,11 @@ services:
   # ─── Admin Portal ─────────────────────────────────────────────────────────
   # Domain in Dokploy UI: admin.yourdomain.com → port 80
   admin-app:
-    build:
-      context: ./frontend/admin
-      dockerfile: Dockerfile
-      args:
-        VITE_API_BASE_URL: ${BACKEND_URL}/api
+    image: harshath/lms-admin:latest
     container_name: lms_admin
     restart: unless-stopped
+    environment:
+      VITE_API_BASE_URL: ${BACKEND_URL}/api
     expose:
       - "80"
     networks:
@@ -124,34 +118,28 @@ services:
   # ─── Teacher Portal ───────────────────────────────────────────────────────
   # Domain in Dokploy UI: teacher.yourdomain.com → port 80
   teacher-app:
-    build:
-      context: ./frontend/teacher
-      dockerfile: Dockerfile
-      args:
-        VITE_API_BASE_URL: ${BACKEND_URL}/api
+    image: harshath/lms-teacher:latest
     container_name: lms_teacher
     restart: unless-stopped
+    environment:
+      VITE_API_BASE_URL: ${BACKEND_URL}/api
     expose:
       - "80"
     networks:
       - dokploy-network
 
   # ─── Student Portal ───────────────────────────────────────────────────────
-  # SUBDOMAIN mode (default):  STUDENT_BASE_PATH=/
+  # SUBDOMAIN mode (default):  STUDENT_TAG=latest   → image built with VITE_BASE_PATH=/
   #   → Dokploy domain: app.yourdomain.com → port 80
   #
-  # PATH mode:                 STUDENT_BASE_PATH=/app
-  #   → Dokploy domain: yourdomain.com → port 80
-  #     Traefik rule: PathPrefix `/app`  (no StripPrefix — keep the path)
+  # PATH mode:                 STUDENT_TAG=pathmode  → image built with VITE_BASE_PATH=/app
+  #   → Dokploy domain: yourdomain.com → port 80, Traefik PathPrefix: /app
   student-app:
-    build:
-      context: ./frontend/student
-      dockerfile: Dockerfile
-      args:
-        VITE_API_BASE_URL: ${BACKEND_URL}/api
-        VITE_BASE_PATH: ${STUDENT_BASE_PATH:-/}
+    image: harshath/lms-student:${STUDENT_TAG:-latest}
     container_name: lms_student
     restart: unless-stopped
+    environment:
+      VITE_API_BASE_URL: ${BACKEND_URL}/api
     expose:
       - "80"
     networks:

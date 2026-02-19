@@ -9,8 +9,9 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# VITE_API_BASE_URL is baked into the JS bundle at build time
-ARG VITE_API_BASE_URL
+# VITE_API_BASE_URL is replaced at runtime via docker-entrypoint.sh
+# Built with a placeholder so the image is reusable across clients
+ARG VITE_API_BASE_URL=__VITE_API_BASE_URL__
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
 COPY package.json package-lock.json* ./
@@ -24,6 +25,10 @@ FROM nginx:1.27-alpine AS production
 
 # Copy Vite build output
 COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Entrypoint: injects VITE_API_BASE_URL at container startup
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 
 # SPA router support — all unknown routes return index.html
 RUN printf 'server {\n\
@@ -42,3 +47,4 @@ RUN printf 'server {\n\
 }\n' > /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
+CMD ["/docker-entrypoint.sh"]

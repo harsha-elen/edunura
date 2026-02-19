@@ -7,7 +7,7 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_API_URL=__NEXT_PUBLIC_API_URL__
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
 COPY package.json package-lock.json* ./
@@ -31,4 +31,7 @@ COPY --from=builder /app/public ./public
 
 EXPOSE 3000
 
-CMD ["node", "server.js"]
+# Entrypoint: injects NEXT_PUBLIC_API_URL at startup, then starts Next.js
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+CMD ["/docker-entrypoint.sh"]

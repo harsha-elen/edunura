@@ -14,7 +14,7 @@ At your domain registrar, add these **A records** pointing to your VPS IP:
 | Record | Points to |
 |--------|-----------|
 | `@` (root) | VPS IP |
-| `api` | VPS IP |
+| `{API_SUBDOMAIN}` (value from env) | VPS IP |
 | `app` | VPS IP ← skip if using path mode |
 | `admin` | VPS IP |
 | `teacher` | VPS IP |
@@ -39,6 +39,7 @@ At your domain registrar, add these **A records** pointing to your VPS IP:
 
 ```
 DOMAIN=clientdomain.com
+API_SUBDOMAIN=api                 ← or auth, server, backend — whatever the client wants
 ADMIN_EMAIL=admin@clientdomain.com
 ADMIN_PASSWORD=SomeStrongPassword
 DB_ROOT_PASSWORD=             ← any strong password
@@ -78,7 +79,7 @@ Go to **Domains** tab → **Add Domain** for each service:
 | Domain | Service | Port |
 |--------|---------|------|
 | `clientdomain.com` | `landing` | `3000` |
-| `api.clientdomain.com` | `backend` | `5000` |
+| `{API_SUBDOMAIN}.clientdomain.com` | `backend` | `5000` |
 | `app.clientdomain.com` | `student-app` | `80` |
 | `teacher.clientdomain.com` | `teacher-app` | `80` |
 | `admin.clientdomain.com` | `admin-app` | `80` |
@@ -88,7 +89,7 @@ Go to **Domains** tab → **Add Domain** for each service:
 | Domain | Service | Port | Path Prefix |
 |--------|---------|------|-------------|
 | `clientdomain.com` | `landing` | `3000` | — |
-| `api.clientdomain.com` | `backend` | `5000` | — |
+| `{API_SUBDOMAIN}.clientdomain.com` | `backend` | `5000` | — |
 | `clientdomain.com` | `student-app` | `80` | `/app` (no StripPrefix) |
 | `teacher.clientdomain.com` | `teacher-app` | `80` | — |
 | `admin.clientdomain.com` | `admin-app` | `80` | — |

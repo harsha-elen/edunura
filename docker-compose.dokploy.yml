@@ -11,15 +11,15 @@
 # SETUP IN DOKPLOY UI:
 #   1. Create a new "Docker Compose" project
 #   2. Connect your Git repo, set compose file to: docker-compose.dokploy.yml
-#   3. Go to "Environment" tab → paste the contents of .env.docker.example
-#      and fill in real values (especially DOMAIN, passwords, secrets)
+#   3. Go to "Environment" tab → paste the filled-in contents of .env.docker.example
+#      (fill DOMAIN, passwords, secrets, AWS, email before pasting)
 #   4. Deploy
 #   5. Go to "Domains" tab → add a domain for each service (see ports below):
-#       landing    → yourdomain.com          (port 3000)
-#       backend    → api.yourdomain.com      (port 5000)
-#       student    → app.yourdomain.com      (port 80)
-#       teacher    → teacher.yourdomain.com  (port 80)
-#       admin      → admin.yourdomain.com    (port 80)
+#       landing    → yourdomain.com                   (port 3000)
+#       backend    → {API_SUBDOMAIN}.yourdomain.com   (port 5000)
+#       student    → app.yourdomain.com               (port 80)
+#       teacher    → teacher.yourdomain.com           (port 80)
+#       admin      → admin.yourdomain.com             (port 80)
 ##############################################################################
 
 services:
@@ -53,7 +53,34 @@ services:
       dockerfile: Dockerfile
     container_name: lms_backend
     restart: unless-stopped
-    env_file: .env.docker
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      PORT: ${PORT}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_REGION: ${AWS_REGION}
+      AWS_S3_BUCKET: ${AWS_S3_BUCKET}
+      EMAIL_SERVICE: ${EMAIL_SERVICE}
+      EMAIL_FROM: ${EMAIL_FROM}
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY}
+      FRONTEND_URL: ${FRONTEND_URL}
+      STUDENT_URL: ${STUDENT_URL}
+      ADMIN_URL: ${ADMIN_URL}
+      TEACHER_URL: ${TEACHER_URL}
+      LANDING_URL: ${LANDING_URL}
+      MAX_FILE_SIZE: ${MAX_FILE_SIZE}
+      ALLOWED_FILE_TYPES: ${ALLOWED_FILE_TYPES}
     depends_on:
       db:
         condition: service_healthy
@@ -72,8 +99,7 @@ services:
       context: ./frontend/landing
       dockerfile: Dockerfile
       args:
-        # Interpolated from DOMAIN env var set in Dokploy UI
-        NEXT_PUBLIC_API_URL: https://api.${DOMAIN}
+        NEXT_PUBLIC_API_URL: https://${API_SUBDOMAIN:-api}.${DOMAIN}
     container_name: lms_landing
     restart: unless-stopped
     expose:
@@ -88,7 +114,7 @@ services:
       context: ./frontend/admin
       dockerfile: Dockerfile
       args:
-        VITE_API_BASE_URL: https://api.${DOMAIN}/api
+        VITE_API_BASE_URL: https://${API_SUBDOMAIN:-api}.${DOMAIN}/api
     container_name: lms_admin
     restart: unless-stopped
     expose:
@@ -103,7 +129,7 @@ services:
       context: ./frontend/teacher
       dockerfile: Dockerfile
       args:
-        VITE_API_BASE_URL: https://api.${DOMAIN}/api
+        VITE_API_BASE_URL: https://${API_SUBDOMAIN:-api}.${DOMAIN}/api
     container_name: lms_teacher
     restart: unless-stopped
     expose:
@@ -123,7 +149,7 @@ services:
       context: ./frontend/student
       dockerfile: Dockerfile
       args:
-        VITE_API_BASE_URL: https://api.${DOMAIN}/api
+        VITE_API_BASE_URL: https://${API_SUBDOMAIN:-api}.${DOMAIN}/api
         VITE_BASE_PATH: ${STUDENT_BASE_PATH:-/}
     container_name: lms_student
     restart: unless-stopped

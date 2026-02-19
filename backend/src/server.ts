@@ -34,11 +34,10 @@ app.use(cors({
         'http://localhost:3002', // Teacher
         'http://localhost:3003', // Student
         'http://localhost:3004', // Student (alternate)
-        process.env.FRONTEND_URL || '',
+        process.env.STUDENT_URL || '',
         process.env.ADMIN_URL || '',
         process.env.TEACHER_URL || '',
-        process.env.STUDENT_URL || '',
-        process.env.LANDING_URL || '',
+        process.env.LANDING_URL || ''
     ].filter(Boolean),
     credentials: true,
 }));

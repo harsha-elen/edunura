@@ -28,7 +28,7 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Entrypoint: injects VITE_API_BASE_URL at container startup
 COPY docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
+RUN sed -i 's/\r$//' /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh
 
 # SPA router support — all unknown routes return index.html
 RUN printf 'server {\n\

@@ -51,5 +51,5 @@ EXPOSE 80
 # Entrypoint: injects VITE_API_BASE_URL at container startup
 # (VITE_BASE_PATH is already baked into nginx config and JS routing at build time)
 COPY docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
+RUN sed -i 's/\r$//' /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh
 CMD ["/docker-entrypoint.sh"]

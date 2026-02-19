@@ -33,5 +33,5 @@ EXPOSE 3000
 
 # Entrypoint: injects NEXT_PUBLIC_API_URL at startup, then starts Next.js
 COPY docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
+RUN sed -i 's/\r$//' /docker-entrypoint.sh && chmod +x /docker-entrypoint.sh
 CMD ["/docker-entrypoint.sh"]

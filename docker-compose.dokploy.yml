@@ -1,0 +1,150 @@
+##############################################################################
+# LMS — Docker Compose for Dokploy
+#
+# KEY DIFFERENCES vs docker-compose.yml:
+#   • No nginx proxy / certbot — Dokploy's Traefik handles routing + SSL
+#   • All public services join "dokploy-network" so Traefik can reach them
+#   • Domains are configured in the Dokploy UI (Domains tab), NOT hardcoded
+#   • Internal services (db) stay on lms_internal only (not exposed)
+#   • Build args are interpolated from env vars set in the Dokploy UI
+#
+# SETUP IN DOKPLOY UI:
+#   1. Create a new "Docker Compose" project
+#   2. Connect your Git repo, set compose file to: docker-compose.dokploy.yml
+#   3. Go to "Environment" tab → paste the contents of .env.docker.example
+#      and fill in real values (especially DOMAIN, passwords, secrets)
+#   4. Deploy
+#   5. Go to "Domains" tab → add a domain for each service (see ports below):
+#       landing    → yourdomain.com          (port 3000)
+#       backend    → api.yourdomain.com      (port 5000)
+#       student    → app.yourdomain.com      (port 80)
+#       teacher    → teacher.yourdomain.com  (port 80)
+#       admin      → admin.yourdomain.com    (port 80)
+##############################################################################
+
+services:
+
+  # ─── Database (internal only) ─────────────────────────────────────────────
+  db:
+    image: mysql:8.0
+    container_name: lms_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./backend/database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - lms_internal
+
+  # ─── Backend API ───────────────────────────────────────────────────────────
+  # Domain in Dokploy UI: api.yourdomain.com → port 5000
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: lms_backend
+    restart: unless-stopped
+    env_file: .env.docker
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - uploads_data:/app/uploads
+    expose:
+      - "5000"
+    networks:
+      - lms_internal
+      - dokploy-network
+
+  # ─── Landing Site (Next.js) ───────────────────────────────────────────────
+  # Domain in Dokploy UI: yourdomain.com → port 3000
+  landing:
+    build:
+      context: ./frontend/landing
+      dockerfile: Dockerfile
+      args:
+        # Interpolated from DOMAIN env var set in Dokploy UI
+        NEXT_PUBLIC_API_URL: https://api.${DOMAIN}
+    container_name: lms_landing
+    restart: unless-stopped
+    expose:
+      - "3000"
+    networks:
+      - dokploy-network
+
+  # ─── Admin Portal ─────────────────────────────────────────────────────────
+  # Domain in Dokploy UI: admin.yourdomain.com → port 80
+  admin-app:
+    build:
+      context: ./frontend/admin
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: https://api.${DOMAIN}/api
+    container_name: lms_admin
+    restart: unless-stopped
+    expose:
+      - "80"
+    networks:
+      - dokploy-network
+
+  # ─── Teacher Portal ───────────────────────────────────────────────────────
+  # Domain in Dokploy UI: teacher.yourdomain.com → port 80
+  teacher-app:
+    build:
+      context: ./frontend/teacher
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: https://api.${DOMAIN}/api
+    container_name: lms_teacher
+    restart: unless-stopped
+    expose:
+      - "80"
+    networks:
+      - dokploy-network
+
+  # ─── Student Portal ───────────────────────────────────────────────────────
+  # SUBDOMAIN mode (default):  STUDENT_BASE_PATH=/
+  #   → Dokploy domain: app.yourdomain.com → port 80
+  #
+  # PATH mode:                 STUDENT_BASE_PATH=/app
+  #   → Dokploy domain: yourdomain.com → port 80
+  #     Traefik rule: PathPrefix `/app`  (no StripPrefix — keep the path)
+  student-app:
+    build:
+      context: ./frontend/student
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: https://api.${DOMAIN}/api
+        VITE_BASE_PATH: ${STUDENT_BASE_PATH:-/}
+    container_name: lms_student
+    restart: unless-stopped
+    expose:
+      - "80"
+    networks:
+      - dokploy-network
+
+# ─── Volumes ───────────────────────────────────────────────────────────────
+volumes:
+  db_data:
+    driver: local
+  uploads_data:
+    driver: local
+
+# ─── Networks ──────────────────────────────────────────────────────────────
+networks:
+  # Internal network — db never touches the internet
+  lms_internal:
+    driver: bridge
+
+  # Dokploy's Traefik network — must be declared as external
+  dokploy-network:
+    external: true

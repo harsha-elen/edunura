@@ -25,9 +25,12 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-# Install only production deps
+# Install only production deps — python3/make/g++ needed to compile bcrypt native binding
 COPY package.json package-lock.json* ./
-RUN npm ci --omit=dev --ignore-scripts && npm cache clean --force
+RUN apk add --no-cache python3 make g++ \
+    && npm ci --omit=dev \
+    && npm cache clean --force \
+    && apk del python3 make g++
 
 # Copy compiled output from builder
 COPY --from=builder /app/dist ./dist

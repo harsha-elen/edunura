@@ -30,6 +30,34 @@ CREATE TABLE IF NOT EXISTS `course_categories` (
   CONSTRAINT `course_categories_ibfk_1` FOREIGN KEY (`parent_id`) REFERENCES `course_categories` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Table: users
+CREATE TABLE IF NOT EXISTS `users` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `email` varchar(255) NOT NULL,
+  `password` varchar(255) NOT NULL,
+  `first_name` varchar(100) NOT NULL,
+  `last_name` varchar(100) NOT NULL,
+  `role` enum('admin','moderator','teacher','student') NOT NULL DEFAULT 'student',
+  `phone` varchar(20) DEFAULT NULL,
+  `avatar` varchar(500) DEFAULT NULL,
+  `is_active` tinyint(1) DEFAULT 1,
+  `is_verified` tinyint(1) DEFAULT 0,
+  `last_login` datetime DEFAULT NULL,
+  `reset_password_token` varchar(255) DEFAULT NULL,
+  `reset_password_expires` datetime DEFAULT NULL,
+  `created_at` datetime NOT NULL,
+  `updated_at` datetime NOT NULL,
+  `bio` text DEFAULT NULL,
+  `location` varchar(255) DEFAULT NULL,
+  `billing_address` varchar(500) DEFAULT NULL,
+  `billing_city` varchar(100) DEFAULT NULL,
+  `billing_state` varchar(100) DEFAULT NULL,
+  `billing_zip` varchar(20) DEFAULT NULL,
+  `billing_country` varchar(100) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `email` (`email`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Table: courses
 CREATE TABLE IF NOT EXISTS `courses` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -68,34 +96,6 @@ CREATE TABLE IF NOT EXISTS `courses` (
   UNIQUE KEY `slug` (`slug`),
   KEY `created_by` (`created_by`),
   CONSTRAINT `courses_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Table: users
-CREATE TABLE IF NOT EXISTS `users` (
-  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `email` varchar(255) NOT NULL,
-  `password` varchar(255) NOT NULL,
-  `first_name` varchar(100) NOT NULL,
-  `last_name` varchar(100) NOT NULL,
-  `role` enum('admin','moderator','teacher','student') NOT NULL DEFAULT 'student',
-  `phone` varchar(20) DEFAULT NULL,
-  `avatar` varchar(500) DEFAULT NULL,
-  `is_active` tinyint(1) DEFAULT 1,
-  `is_verified` tinyint(1) DEFAULT 0,
-  `last_login` datetime DEFAULT NULL,
-  `reset_password_token` varchar(255) DEFAULT NULL,
-  `reset_password_expires` datetime DEFAULT NULL,
-  `created_at` datetime NOT NULL,
-  `updated_at` datetime NOT NULL,
-  `bio` text DEFAULT NULL,
-  `location` varchar(255) DEFAULT NULL,
-  `billing_address` varchar(500) DEFAULT NULL,
-  `billing_city` varchar(100) DEFAULT NULL,
-  `billing_state` varchar(100) DEFAULT NULL,
-  `billing_zip` varchar(20) DEFAULT NULL,
-  `billing_country` varchar(100) DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `email` (`email`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Table: course_sections

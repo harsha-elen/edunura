@@ -27,13 +27,6 @@ const app: Application = express();
 const PORT = process.env.PORT || 5000;
 
 // CORS middleware - must be first to apply to all routes including static files
-// Origins are derived from DOMAIN + STUDENT_BASE_PATH — no need to set them individually
-const _domain = process.env.DOMAIN || '';
-const _studentBasePath = process.env.STUDENT_BASE_PATH || '/';
-const _studentOrigin = _studentBasePath === '/'
-    ? (_domain ? `https://app.${_domain}` : '')   // subdomain mode: app.domain.com
-    : (_domain ? `https://${_domain}` : '');       // path mode: domain.com/app (origin = domain)
-
 app.use(cors({
     origin: [
         'http://localhost:3000', // Student (legacy)
@@ -41,10 +34,11 @@ app.use(cors({
         'http://localhost:3002', // Teacher
         'http://localhost:3003', // Student
         'http://localhost:3004', // Student (alternate)
-        _domain ? `https://${_domain}` : '',           // landing
-        _domain ? `https://admin.${_domain}` : '',     // admin
-        _domain ? `https://teacher.${_domain}` : '',   // teacher
-        _studentOrigin,                                 // student
+        process.env.FRONTEND_URL || '',
+        process.env.ADMIN_URL || '',
+        process.env.TEACHER_URL || '',
+        process.env.STUDENT_URL || '',
+        process.env.LANDING_URL || '',
     ].filter(Boolean),
     credentials: true,
 }));

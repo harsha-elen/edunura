@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import {
     Box,
@@ -26,6 +26,7 @@ import {
     VisibilityOff,
 } from '@mui/icons-material';
 import { authService } from '../../services/authService';
+import { STATIC_ASSETS_BASE_URL, API_BASE_URL } from '../../services/apiClient';
 
 const Register: React.FC = () => {
     const navigate = useNavigate();
@@ -44,6 +45,26 @@ const Register: React.FC = () => {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [loading, setLoading] = useState(false);
+    const [orgLogo, setOrgLogo] = useState<string | null>(localStorage.getItem('org_logo') || null);
+    const [siteName, setSiteName] = useState(localStorage.getItem('site_name') || 'LMS Portal');
+
+    useEffect(() => {
+        fetch(`${API_BASE_URL}/settings`)
+            .then(r => r.json())
+            .then(data => {
+                const logo = data?.data?.org_logo;
+                if (logo) {
+                    setOrgLogo(logo);
+                    localStorage.setItem('org_logo', logo);
+                }
+                const name = data?.data?.site_name;
+                if (name) {
+                    setSiteName(name);
+                    localStorage.setItem('site_name', name);
+                }
+            })
+            .catch(() => {});
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -157,22 +178,31 @@ const Register: React.FC = () => {
                     }}
                 >
                     <Box sx={{ px: 5, pt: 6, pb: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                        <Box
-                            sx={{
-                                width: 48,
-                                height: 48,
-                                bgcolor: alpha(theme.palette.primary.main, 0.1),
-                                borderRadius: 2,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                mb: 3,
-                                color: theme.palette.primary.main,
-                                boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-                            }}
-                        >
-                            <SchoolIcon sx={{ fontSize: 28 }} />
-                        </Box>
+                        {orgLogo ? (
+                            <Box
+                                component="img"
+                                src={`${STATIC_ASSETS_BASE_URL}${orgLogo.startsWith('/') ? orgLogo : '/' + orgLogo}`}
+                                alt="Logo"
+                                sx={{ height: 80, width: 'auto', maxWidth: '85%', objectFit: 'contain', mb: 3 }}
+                            />
+                        ) : (
+                            <Box
+                                sx={{
+                                    width: 48,
+                                    height: 48,
+                                    bgcolor: alpha(theme.palette.primary.main, 0.1),
+                                    borderRadius: 2,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    mb: 3,
+                                    color: theme.palette.primary.main,
+                                    boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+                                }}
+                            >
+                                <SchoolIcon sx={{ fontSize: 28 }} />
+                            </Box>
+                        )}
                         <Typography variant="h5" component="h1" sx={{ fontWeight: 700, color: 'text.primary', mb: 1, letterSpacing: '-0.025em' }}>
                             Create Student Account
                         </Typography>
@@ -395,7 +425,7 @@ const Register: React.FC = () => {
 
                 <Box sx={{ mt: 5, textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <Typography variant="caption" sx={{ color: 'text.disabled', maxWidth: 280, mx: 'auto', lineHeight: 1.5 }}>
-                        © 2024 LMS Portal. Empowering education everywhere.
+                        © {new Date().getFullYear()} {siteName}. Empowering education everywhere.
                     </Typography>
                     <Box sx={{ display: 'flex', justifyContent: 'center', gap: 3, flexWrap: 'wrap' }}>
                         <Link href="#" variant="caption" sx={{ color: 'text.disabled', fontWeight: 500, '&:hover': { color: 'text.secondary' } }} underline="hover">

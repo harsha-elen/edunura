@@ -145,7 +145,7 @@ const StudentLayout: React.FC = () => {
                         src={`${STATIC_ASSETS_BASE_URL}${orgLogo.startsWith('/') ? orgLogo : '/' + orgLogo}`}
                         alt={siteName}
                         onError={() => setLogoError(true)}
-                        sx={{ width: '100%', maxHeight: 48, objectFit: 'contain' }}
+                        sx={{ width: '80%', height: 'auto', objectFit: 'contain', objectPosition: 'left center', display: 'block' }}
                     />
                 ) : (
                     <>

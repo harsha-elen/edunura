@@ -206,7 +206,7 @@ CREATE TABLE IF NOT EXISTS `live_sessions` (
   PRIMARY KEY (`id`),
   KEY `live_sessions_course_id` (`course_id`),
   KEY `live_sessions_start_time` (`start_time`),
-  CONSTRAINT `live_sessions_ibfk_1` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`)
+  CONSTRAINT `live_sessions_course_fk` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Table: payments

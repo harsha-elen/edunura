@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 
 const CoursesPage = () => {
     return (
@@ -7,7 +8,7 @@ const CoursesPage = () => {
             <div className="mb-8 relative overflow-hidden rounded-xl bg-primary px-6 py-4 shadow-lg flex flex-col md:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                     <div className="bg-white/20 p-3 rounded-full">
-                        <span className="material-icons text-white">local_offer</span>
+                        <span className="material-symbols-outlined text-white">local_offer</span>
                     </div>
                     <div>
                         <h2 className="text-white font-bold text-lg">Start Learning Today - 20% off for new students!</h2>
@@ -15,8 +16,8 @@ const CoursesPage = () => {
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    <span className="bg-white/20 border border-white/30 text-white px-4 py-2 rounded-lg font-mono font-bold tracking-widest uppercase">LEARN20</span>
-                    <button className="bg-white text-primary px-6 py-2 rounded-lg font-bold hover:bg-slate-50 transition-colors">Claim Now</button>
+                    <span className="bg-white/20 border border-white/30 text-white px-4 py-2 rounded-lg font-mono font-bold tracking-widest uppercase text-xs">LEARN20</span>
+                    <button className="bg-white text-primary px-6 py-2 rounded-lg font-bold hover:bg-slate-50 transition-colors text-sm">Claim Now</button>
                 </div>
             </div>
 
@@ -25,43 +26,43 @@ const CoursesPage = () => {
                 <aside className="w-full lg:w-72 flex-shrink-0">
                     <div className="lg:sticky lg:top-24 space-y-8 bg-white p-6 rounded-xl border border-primary/5 shadow-sm">
                         <div>
-                            <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-slate-900 border-none">
-                                <span className="material-icons text-primary text-sm">filter_alt</span>
+                            <h3 className="text-lg font-bold mb-4 flex items-center gap-2 text-slate-900 border-none font-display">
+                                <span className="material-symbols-outlined text-primary text-xl">filter_alt</span>
                                 Filters
                             </h3>
                             <div className="space-y-6">
                                 {/* Topic */}
                                 <div>
-                                    <label className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-3 block">Topic</label>
+                                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-3 block font-display">Topic</label>
                                     <div className="space-y-2">
                                         {['Technology', 'Business', 'Creative Arts', 'Health & Wellness'].map((topic, i) => (
                                             <label key={topic} className="flex items-center gap-3 cursor-pointer group">
                                                 <input defaultChecked={i === 0} className="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4" type="checkbox" />
-                                                <span className="text-slate-600 group-hover:text-primary transition-colors">{topic}</span>
+                                                <span className="text-slate-600 group-hover:text-primary transition-colors text-sm">{topic}</span>
                                             </label>
                                         ))}
                                     </div>
                                 </div>
                                 {/* Level */}
                                 <div>
-                                    <label className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-3 block">Level</label>
+                                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-3 block font-display">Level</label>
                                     <div className="space-y-2">
                                         {['Beginner', 'Intermediate', 'Advanced'].map((level) => (
                                             <label key={level} className="flex items-center gap-3 cursor-pointer group">
                                                 <input className="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4" type="checkbox" />
-                                                <span className="text-slate-600 group-hover:text-primary transition-colors">{level}</span>
+                                                <span className="text-slate-600 group-hover:text-primary transition-colors text-sm">{level}</span>
                                             </label>
                                         ))}
                                     </div>
                                 </div>
                                 {/* Price Range */}
                                 <div>
-                                    <label className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-3 block">Price Range</label>
+                                    <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-3 block font-display">Price Range</label>
                                     <div className="space-y-2">
                                         {['Free', 'Paid', 'Subscription Included'].map((price, i) => (
                                             <label key={price} className="flex items-center gap-3 cursor-pointer group">
                                                 <input defaultChecked={i === 1} className="rounded-full border-slate-300 text-primary focus:ring-primary h-4 w-4" name="price" type="radio" />
-                                                <span className="text-slate-600 group-hover:text-primary transition-colors">{price}</span>
+                                                <span className="text-slate-600 group-hover:text-primary transition-colors text-sm">{price}</span>
                                             </label>
                                         ))}
                                     </div>
@@ -77,17 +78,20 @@ const CoursesPage = () => {
                     {/* Search and Sorting */}
                     <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-6">
                         <div className="relative w-full md:w-96">
-                            <span className="material-icons absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
-                            <input className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-shadow outline-none shadow-sm" placeholder="Search courses, instructors, topics..." type="text" />
+                            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">search</span>
+                            <input className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary focus:border-primary transition-shadow outline-none shadow-sm text-sm" placeholder="Search courses, instructors, topics..." type="text" />
                         </div>
                         <div className="flex items-center gap-3 w-full md:w-auto">
                             <span className="text-sm text-slate-500 whitespace-nowrap">Sort by:</span>
-                            <select className="bg-white border border-slate-200 rounded-lg text-sm px-3 py-2 outline-none focus:ring-1 focus:ring-primary w-full md:w-48 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cpath%20d%3D%22M5%207L10%2012L15%207%22%20stroke%3D%22%2364748B%22%20stroke-width%3D%221.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22/%3E%3C/svg%3E')] bg-[length:20px_20px] bg-[right_8px_center] bg-no-repeat pr-10">
-                                <option>Most Popular</option>
-                                <option>Newest First</option>
-                                <option>Price: Low to High</option>
-                                <option>Price: High to Low</option>
-                            </select>
+                            <div className="relative w-full md:w-48">
+                                <select className="w-full bg-white border border-slate-200 rounded-lg text-sm px-3 py-2 outline-none focus:ring-1 focus:ring-primary appearance-none pr-10">
+                                    <option>Most Popular</option>
+                                    <option>Newest First</option>
+                                    <option>Price: Low to High</option>
+                                    <option>Price: High to Low</option>
+                                </select>
+                                <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">expand_more</span>
+                            </div>
                         </div>
                     </div>
 
@@ -139,7 +143,7 @@ const CoursesPage = () => {
                         {/* Skeleton Card Example */}
                         <div className="bg-white rounded-xl overflow-hidden border border-slate-200 opacity-60 flex flex-col h-full">
                             <div className="relative aspect-video bg-slate-100 flex items-center justify-center">
-                                <span className="material-icons text-slate-300 animate-pulse text-4xl">image</span>
+                                <span className="material-symbols-outlined text-slate-300 animate-pulse text-4xl">image</span>
                             </div>
                             <div className="p-5 flex flex-col flex-1">
                                 <div className="h-3 w-20 bg-slate-100 rounded animate-pulse mb-3"></div>
@@ -157,7 +161,7 @@ const CoursesPage = () => {
 
                     {/* Pagination */}
                     <div className="mt-12 flex flex-col items-center gap-4">
-                        <button className="bg-white border-2 border-primary text-primary hover:bg-primary hover:text-white transition-all px-12 py-3 rounded-xl font-bold text-lg shadow-sm">
+                        <button className="bg-white border-2 border-primary text-primary hover:bg-primary hover:text-white transition-all px-12 py-3 rounded-xl font-bold text-lg shadow-sm font-display">
                             Load More Courses
                         </button>
                         <p className="text-slate-500 text-sm italic">Showing 4 of 542 courses available</p>
@@ -170,32 +174,32 @@ const CoursesPage = () => {
 
 const CourseCard = ({ title, category, instructor, instructorImg, price, oldPrice, tag, tagColor = 'bg-primary', image, description }: any) => (
     <div className="bg-white rounded-xl overflow-hidden border border-slate-200 hover:shadow-xl transition-all group flex flex-col h-full">
-        <div className="relative aspect-video">
+        <div className="relative aspect-video overflow-hidden">
             <img className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" src={image} alt={title} />
             {tag && (
                 <div className="absolute top-3 right-3">
-                    <span className={`${tagColor} text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider shadow-sm`}>{tag}</span>
+                    <span className={`${tagColor} text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider shadow-sm font-display`}>{tag}</span>
                 </div>
             )}
         </div>
         <div className="p-5 flex flex-col flex-1">
             <div className="flex items-center gap-2 mb-2">
-                <span className="text-[10px] font-bold text-primary px-2 py-0.5 bg-primary/10 rounded uppercase">{category}</span>
+                <span className="text-[10px] font-bold text-primary px-2 py-0.5 bg-primary/10 rounded uppercase font-display">{category}</span>
             </div>
-            <h3 className="text-lg font-bold text-slate-900 mb-2 line-clamp-2 leading-tight group-hover:text-primary transition-colors">{title}</h3>
+            <h3 className="text-lg font-bold text-slate-900 mb-2 line-clamp-2 leading-tight group-hover:text-primary transition-colors font-display">{title}</h3>
             <p className="text-sm text-slate-500 mb-4 line-clamp-2">{description}</p>
             <div className="flex items-center gap-2 mb-6 mt-auto">
                 <div className="w-8 h-8 rounded-full bg-slate-200 overflow-hidden border border-slate-100">
-                    <img className="w-full h-full object-cover" src={instructorImg} alt={instructor} />
+                    <img className="w-full h-full object-cover font-display" src={instructorImg} alt={instructor} />
                 </div>
-                <span className="text-xs font-medium text-slate-600">{instructor}</span>
+                <span className="text-xs font-medium text-slate-600 font-display">{instructor}</span>
             </div>
             <div className="flex items-center justify-between pt-4 border-t border-slate-100">
                 <div>
-                    <span className="text-xl font-bold text-slate-900">{price}</span>
-                    {oldPrice && <span className="text-xs text-slate-400 line-through ml-1">{oldPrice}</span>}
+                    <span className="text-xl font-bold text-slate-900 font-display">{price}</span>
+                    {oldPrice && <span className="text-xs text-slate-400 line-through ml-1 font-display">{oldPrice}</span>}
                 </div>
-                <button className="bg-primary/10 text-primary font-bold px-4 py-2 rounded-lg hover:bg-primary hover:text-white transition-colors text-sm border border-primary/20">Enroll</button>
+                <Link href="/course-details" className="bg-primary/10 text-primary font-bold px-4 py-2 rounded-lg hover:bg-primary hover:text-white transition-colors text-sm border border-primary/20 font-display">Enroll</Link>
             </div>
         </div>
     </div>

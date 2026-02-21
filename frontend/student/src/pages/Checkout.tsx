@@ -326,7 +326,7 @@ const Checkout: React.FC = () => {
     };
 
     const handleCompleteAction = () => {
-        const coursePrice = course ? (course.discounted_price || course.price || 0) : 0;
+        const coursePrice = course ? (course.discounted_price && course.discounted_price > 0 ? course.discounted_price : course.price ?? 0) : 0;
         if (coursePrice > 0) {
             handleRazorpayPayment();
         } else {
@@ -340,7 +340,10 @@ const Checkout: React.FC = () => {
         return `${STATIC_ASSETS_BASE_URL}/${thumbnail}`;
     };
 
-    const coursePrice = course ? (course.discounted_price || course.price || 0) : 0;
+    const originalPrice = course?.price ?? 0;
+    const hasDiscount = !!(course?.discounted_price && course.discounted_price > 0 && course.discounted_price < originalPrice);
+    const coursePrice = hasDiscount ? course!.discounted_price! : originalPrice;
+
     const isPaidCourse = coursePrice > 0;
 
     const formatINR = (amount: number) => {
@@ -555,7 +558,7 @@ const Checkout: React.FC = () => {
                         </Box>
                     </Grid>
 
-                    <Grid item xs={12} lg={4.8} xl={4} sx={{ xl: { maxWidth: 400, flexBasis: 400 } }}>
+                    <Grid item xs={12} lg={4.8}>
                         <Box sx={{ position: 'sticky', top: 100 }}>
                             <Paper variant="outlined" sx={{ p: 4, borderRadius: 4, bgcolor: 'white', borderColor: colors.slate200, boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)' }}>
                                 <Typography variant="h6" sx={{ fontWeight: 800, color: colors.slate900, mb: 4, ...fontLexend }}>Order Summary</Typography>
@@ -569,16 +572,28 @@ const Checkout: React.FC = () => {
                                                 {(course as any)?.creator ? `${(course as any).creator.first_name || ''} ${(course as any).creator.last_name || ''}`.trim() : ''}
                                             </Typography>
                                         </Box>
-                                        <Typography variant="subtitle1" sx={{ fontWeight: 800, color: colors.slate900, ...fontLexend }}>
-                                            {coursePrice === 0 ? 'Free' : formatINR(coursePrice)}
-                                        </Typography>
+                                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                                            {hasDiscount && (
+                                                <Typography variant="caption" sx={{ textDecoration: 'line-through', color: colors.slate400, ...fontLexend }}>
+                                                    {formatINR(originalPrice)}
+                                                </Typography>
+                                            )}
+                                            <Typography variant="subtitle1" sx={{ fontWeight: 800, color: colors.slate900, ...fontLexend }}>
+                                                {coursePrice === 0 ? 'Free' : formatINR(coursePrice)}
+                                            </Typography>
+                                        </Box>
                                     </Box>
                                 </Box>
 
                                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mb: 4 }}>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                         <Typography variant="body2" sx={{ color: colors.slate500, ...fontLexend }}>Subtotal</Typography>
-                                        <Typography variant="body2" sx={{ color: colors.slate600, fontWeight: 500, ...fontLexend }}>{coursePrice === 0 ? 'Free' : formatINR(coursePrice)}</Typography>
+                                        <Typography variant="body2" sx={{ color: colors.slate600, fontWeight: 500, ...fontLexend }}>
+                                            {hasDiscount && (
+                                                <Typography component="span" variant="body2" sx={{ textDecoration: 'line-through', color: colors.slate400, mr: 1, ...fontLexend }}>{formatINR(originalPrice)}</Typography>
+                                            )}
+                                            {coursePrice === 0 ? 'Free' : formatINR(coursePrice)}
+                                        </Typography>
                                     </Box>
                                     {isPaidCourse && (
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>

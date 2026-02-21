@@ -136,7 +136,7 @@ const PurchaseSuccess: React.FC = () => {
             <Box component="header" sx={{ height: 72, bgcolor: 'white', borderBottom: `1px solid ${colors.slate200}`, display: 'flex', alignItems: 'center', px: { xs: 3, lg: 10 }, position: 'sticky', top: 0, zIndex: 1100 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                     {orgLogo ? (
-                        <Box component="img" src={`${STATIC_ASSETS_BASE_URL}${orgLogo.startsWith('/') ? orgLogo : '/' + orgLogo}`} alt={siteName} sx={{ height: 40, width: 'auto', objectFit: 'contain' }} />
+                        <Box component="img" src={`${STATIC_ASSETS_BASE_URL}${orgLogo.startsWith('/') ? orgLogo : '/' + orgLogo}`} alt={siteName} sx={{ height: 64, width: 'auto', objectFit: 'contain' }} />
                     ) : (
                         <Box sx={{ color: primaryColor, display: 'flex' }}>
                             <svg width="32" height="32" viewBox="0 0 48 48" fill="currentColor">

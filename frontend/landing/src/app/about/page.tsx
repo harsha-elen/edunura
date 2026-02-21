@@ -10,13 +10,13 @@ const AboutPage = () => {
                 <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-12 items-center">
                     <div>
                         <span className="inline-block py-1 px-4 bg-primary/10 text-primary rounded-full text-sm font-semibold mb-6 uppercase tracking-wider">Our Journey</span>
-                        <h1 className="text-5xl md:text-6xl font-bold leading-tight mb-6">Empowering the Future of <span className="text-primary">Digital Learning</span></h1>
+                        <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold leading-tight mb-6">Empowering the Future of <span className="text-primary">Digital Learning</span></h1>
                         <p className="text-lg text-slate-600 mb-8 leading-relaxed">
                             Founded with a vision to democratize elite education, we bridge the gap between world-class knowledge and ambitious learners worldwide. Our platform is more than an LMS—it's a gateway to professional mastery.
                         </p>
-                        <div className="flex gap-4">
-                            <button className="bg-primary text-white px-8 py-4 rounded-xl font-bold shadow-lg shadow-primary/20 hover:-translate-y-1 transition-transform">Explore Our Values</button>
-                            <button className="border border-primary/20 bg-white px-8 py-4 rounded-xl font-bold hover:bg-slate-50 transition-colors">Watch Story</button>
+                        <div className="flex flex-col sm:flex-row gap-4">
+                            <button className="bg-primary text-white px-8 py-4 rounded-xl font-bold shadow-lg shadow-primary/20 hover:-translate-y-1 transition-transform w-full sm:w-auto">Explore Our Values</button>
+                            <button className="border border-primary/20 bg-white px-8 py-4 rounded-xl font-bold hover:bg-slate-50 transition-colors w-full sm:w-auto">Watch Story</button>
                         </div>
                     </div>
                     <div className="relative">
@@ -30,22 +30,22 @@ const AboutPage = () => {
             {/* Impact Stats */}
             <section className="py-20 bg-white">
                 <div className="max-w-7xl mx-auto px-6">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-                        <div className="text-center p-8 rounded-2xl bg-background-light border border-primary/5">
-                            <div className="text-4xl md:text-5xl font-bold text-primary mb-2">50k+</div>
-                            <div className="text-slate-500 font-medium">Students Enrolled</div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div className="text-center p-6 sm:p-8 rounded-2xl bg-background-light border border-primary/5">
+                            <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-primary mb-2">50k+</div>
+                            <div className="text-slate-500 font-medium text-sm sm:text-base">Students Enrolled</div>
                         </div>
-                        <div className="text-center p-8 rounded-2xl bg-background-light border border-primary/5">
-                            <div className="text-4xl md:text-5xl font-bold text-primary mb-2">200+</div>
-                            <div className="text-slate-500 font-medium">Expert Courses</div>
+                        <div className="text-center p-6 sm:p-8 rounded-2xl bg-background-light border border-primary/5">
+                            <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-primary mb-2">200+</div>
+                            <div className="text-slate-500 font-medium text-sm sm:text-base">Expert Courses</div>
                         </div>
-                        <div className="text-center p-8 rounded-2xl bg-background-light border border-primary/5">
-                            <div className="text-4xl md:text-5xl font-bold text-primary mb-2">95%</div>
-                            <div className="text-slate-500 font-medium">Completion Rate</div>
+                        <div className="text-center p-6 sm:p-8 rounded-2xl bg-background-light border border-primary/5">
+                            <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-primary mb-2">95%</div>
+                            <div className="text-slate-500 font-medium text-sm sm:text-base">Completion Rate</div>
                         </div>
-                        <div className="text-center p-8 rounded-2xl bg-background-light border border-primary/5">
-                            <div className="text-4xl md:text-5xl font-bold text-primary mb-2">15</div>
-                            <div className="text-slate-500 font-medium">Global Partners</div>
+                        <div className="text-center p-6 sm:p-8 rounded-2xl bg-background-light border border-primary/5">
+                            <div className="text-3xl sm:text-4xl md:text-5xl font-bold text-primary mb-2">15</div>
+                            <div className="text-slate-500 font-medium text-sm sm:text-base">Global Partners</div>
                         </div>
                     </div>
                 </div>
@@ -61,7 +61,7 @@ const AboutPage = () => {
                     <div className="grid md:grid-cols-2 gap-12">
                         <div className="group p-10 bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-transparent hover:border-primary/20 transition-all">
                             <div className="w-14 h-14 bg-primary/10 rounded-xl flex items-center justify-center text-primary mb-6">
-                                <span className="material-icons text-3xl">lightbulb</span>
+                                <span className="material-symbols-outlined text-3xl">lightbulb</span>
                             </div>
                             <h3 className="text-2xl font-bold mb-4">Our Mission</h3>
                             <p className="text-slate-600 leading-relaxed">
@@ -70,7 +70,7 @@ const AboutPage = () => {
                         </div>
                         <div className="group p-10 bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-transparent hover:border-primary/20 transition-all">
                             <div className="w-14 h-14 bg-primary/10 rounded-xl flex items-center justify-center text-primary mb-6">
-                                <span className="material-icons text-3xl">visibility</span>
+                                <span className="material-symbols-outlined text-3xl">visibility</span>
                             </div>
                             <h3 className="text-2xl font-bold mb-4">Our Vision</h3>
                             <p className="text-slate-600 leading-relaxed">
@@ -90,7 +90,7 @@ const AboutPage = () => {
                             <p className="text-slate-600">Our diverse team of educators, engineers, and creatives work tirelessly to redefine the learning landscape.</p>
                         </div>
                         <button className="text-primary font-bold flex items-center gap-2 hover:gap-3 transition-all">
-                            Join our team <span className="material-icons">arrow_forward</span>
+                            Join our team <span className="material-symbols-outlined">arrow_forward</span>
                         </button>
                     </div>
                     <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -103,8 +103,8 @@ const AboutPage = () => {
                             <p className="text-primary font-medium text-sm mb-4">Founder & CEO</p>
                             <p className="text-slate-500 text-sm leading-relaxed mb-4">Former EdTech lead with 15+ years experience in digital pedagogy and systems architecture.</p>
                             <div className="flex gap-3">
-                                <a className="text-slate-400 hover:text-primary transition-colors" href="#"><span className="material-icons text-xl">share</span></a>
-                                <a className="text-slate-400 hover:text-primary transition-colors" href="#"><span className="material-icons text-xl">link</span></a>
+                                <a className="text-slate-400 hover:text-primary transition-colors" href="#"><span className="material-symbols-outlined text-xl">share</span></a>
+                                <a className="text-slate-400 hover:text-primary transition-colors" href="#"><span className="material-symbols-outlined text-xl">link</span></a>
                             </div>
                         </div>
                         {/* Team Member 2 */}
@@ -116,8 +116,8 @@ const AboutPage = () => {
                             <p className="text-primary font-medium text-sm mb-4">Chief Operating Officer</p>
                             <p className="text-slate-500 text-sm leading-relaxed mb-4">Strategic operations expert focused on scaling educational ecosystems and student success.</p>
                             <div className="flex gap-3">
-                                <a className="text-slate-400 hover:text-primary transition-colors" href="#"><span className="material-icons text-xl">share</span></a>
-                                <a className="text-slate-400 hover:text-primary transition-colors" href="#"><span className="material-icons text-xl">link</span></a>
+                                <a className="text-slate-400 hover:text-primary transition-colors" href="#"><span className="material-symbols-outlined text-xl">share</span></a>
+                                <a className="text-slate-400 hover:text-primary transition-colors" href="#"><span className="material-symbols-outlined text-xl">link</span></a>
                             </div>
                         </div>
                         {/* Team Member 3 */}
@@ -129,8 +129,8 @@ const AboutPage = () => {
                             <p className="text-primary font-medium text-sm mb-4">Chief Technology Officer</p>
                             <p className="text-slate-500 text-sm leading-relaxed mb-4">Cloud infrastructure pioneer building the next generation of interactive learning tools.</p>
                             <div className="flex gap-3">
-                                <a className="text-slate-400 hover:text-primary transition-colors" href="#"><span className="material-icons text-xl">share</span></a>
-                                <a className="text-slate-400 hover:text-primary transition-colors" href="#"><span className="material-icons text-xl">link</span></a>
+                                <a className="text-slate-400 hover:text-primary transition-colors" href="#"><span className="material-symbols-outlined text-xl">share</span></a>
+                                <a className="text-slate-400 hover:text-primary transition-colors" href="#"><span className="material-symbols-outlined text-xl">link</span></a>
                             </div>
                         </div>
                         {/* Team Member 4 */}
@@ -142,8 +142,8 @@ const AboutPage = () => {
                             <p className="text-primary font-medium text-sm mb-4">Academic Director</p>
                             <p className="text-slate-500 text-sm leading-relaxed mb-4">Curriculum designer specializing in cognitive load theory and online engagement.</p>
                             <div className="flex gap-3">
-                                <a className="text-slate-400 hover:text-primary transition-colors" href="#"><span className="material-icons text-xl">share</span></a>
-                                <a className="text-slate-400 hover:text-primary transition-colors" href="#"><span className="material-icons text-xl">link</span></a>
+                                <a className="text-slate-400 hover:text-primary transition-colors" href="#"><span className="material-symbols-outlined text-xl">share</span></a>
+                                <a className="text-slate-400 hover:text-primary transition-colors" href="#"><span className="material-symbols-outlined text-xl">link</span></a>
                             </div>
                         </div>
                     </div>
@@ -162,13 +162,13 @@ const AboutPage = () => {
                             </p>
                             <div className="flex flex-wrap gap-4">
                                 <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 px-4 py-2 rounded-full text-white text-sm">
-                                    <span className="material-icons text-sm">public</span> 45+ Countries
+                                    <span className="material-symbols-outlined text-sm">public</span> 45+ Countries
                                 </div>
                                 <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 px-4 py-2 rounded-full text-white text-sm">
-                                    <span className="material-icons text-sm">translate</span> 12 Languages
+                                    <span className="material-symbols-outlined text-sm">translate</span> 12 Languages
                                 </div>
                                 <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm border border-white/20 px-4 py-2 rounded-full text-white text-sm">
-                                    <span className="material-icons text-sm">groups</span> 500+ Communities
+                                    <span className="material-symbols-outlined text-sm">groups</span> 500+ Communities
                                 </div>
                             </div>
                         </div>
@@ -185,9 +185,9 @@ const AboutPage = () => {
             <section className="py-24 text-center">
                 <div className="max-w-3xl mx-auto px-6">
                     <h2 className="text-4xl font-bold mb-8">Ready to start your journey?</h2>
-                    <p className="text-lg text-slate-600 mb-10">Join thousands of professionals already mastering new skills with EduFlow.</p>
+                    <p className="text-lg text-slate-600 mb-10">Join thousands of professionals already mastering new skills with Edunura.</p>
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                        <a className="bg-primary text-white px-10 py-4 rounded-xl font-bold text-lg hover:bg-primary/90 shadow-lg shadow-primary/30 transition-all" href="#">Explore Courses</a>
+                        <a className="bg-primary text-white px-10 py-4 rounded-xl font-bold text-lg hover:bg-primary/90 shadow-lg shadow-primary/30 transition-all" href="/courses">Explore Courses</a>
                         <a className="bg-white border border-slate-200 px-10 py-4 rounded-xl font-bold text-lg hover:border-primary transition-colors" href="/contact">Contact Sales</a>
                     </div>
                 </div>

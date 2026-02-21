@@ -24,6 +24,7 @@ import {
     VisibilityOff,
 } from '@mui/icons-material';
 import { authService } from '../../services/authService';
+import { STATIC_ASSETS_BASE_URL, API_BASE_URL } from '../../services/apiClient';
 
 const Login: React.FC = () => {
     const navigate = useNavigate();
@@ -33,6 +34,26 @@ const Login: React.FC = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [orgLogo, setOrgLogo] = useState<string | null>(localStorage.getItem('org_logo') || null);
+    const [siteName, setSiteName] = useState(localStorage.getItem('site_name') || 'LMS Education Systems');
+
+    useEffect(() => {
+        fetch(`${API_BASE_URL}/settings`)
+            .then(r => r.json())
+            .then(data => {
+                const logo = data?.data?.org_logo;
+                if (logo) {
+                    setOrgLogo(logo);
+                    localStorage.setItem('org_logo', logo);
+                }
+                const name = data?.data?.site_name;
+                if (name) {
+                    setSiteName(name);
+                    localStorage.setItem('site_name', name);
+                }
+            })
+            .catch(() => {});
+    }, []);
 
     // Redirect to dashboard if already logged in
     useEffect(() => {
@@ -133,22 +154,31 @@ const Login: React.FC = () => {
                     }}
                 >
                     <Box sx={{ px: 5, pt: 6, pb: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                        <Box
-                            sx={{
-                                width: 56,
-                                height: 56,
-                                bgcolor: alpha(theme.palette.primary.main, 0.1),
-                                borderRadius: 3,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                mb: 3,
-                                color: theme.palette.primary.main,
-                                boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-                            }}
-                        >
-                            <SchoolIcon sx={{ fontSize: 32 }} />
-                        </Box>
+                        {orgLogo ? (
+                            <Box
+                                component="img"
+                                src={`${STATIC_ASSETS_BASE_URL}${orgLogo.startsWith('/') ? orgLogo : '/' + orgLogo}`}
+                                alt="Logo"
+                                sx={{ height: 80, width: 'auto', maxWidth: '85%', objectFit: 'contain', mb: 3 }}
+                            />
+                        ) : (
+                            <Box
+                                sx={{
+                                    width: 56,
+                                    height: 56,
+                                    bgcolor: alpha(theme.palette.primary.main, 0.1),
+                                    borderRadius: 3,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    mb: 3,
+                                    color: theme.palette.primary.main,
+                                    boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+                                }}
+                            >
+                                <SchoolIcon sx={{ fontSize: 32 }} />
+                            </Box>
+                        )}
                         <Typography variant="h5" component="h1" sx={{ fontWeight: 700, color: 'text.primary', mb: 1, letterSpacing: '-0.025em' }}>
                             Student Portal
                         </Typography>
@@ -310,7 +340,7 @@ const Login: React.FC = () => {
                         </Link>
                     </Box>
                     <Typography variant="caption" sx={{ color: 'text.disabled', pt: 2, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: '0.65rem' }}>
-                        © 2024 LMS Education Systems
+                        © {new Date().getFullYear()} {siteName}
                     </Typography>
                 </Box>
             </Box>

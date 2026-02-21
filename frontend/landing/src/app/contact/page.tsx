@@ -46,7 +46,7 @@ const ContactPage = () => {
                                 </div>
                                 <button className="w-full md:w-auto bg-primary text-white font-bold py-3 px-8 rounded-lg shadow-md hover:bg-opacity-90 transform active:scale-[0.98] transition-all flex items-center justify-center gap-2" type="submit">
                                     Send Message
-                                    <span className="material-icons text-sm">send</span>
+                                    <span className="material-symbols-outlined text-sm">send</span>
                                 </button>
                             </form>
                         </div>
@@ -60,36 +60,36 @@ const ContactPage = () => {
                             <div className="space-y-6">
                                 <div className="flex items-start gap-4">
                                     <div className="bg-primary/10 p-2 rounded-lg">
-                                        <span className="material-icons text-primary">place</span>
+                                        <span className="material-symbols-outlined text-primary">place</span>
                                     </div>
                                     <div>
                                         <h4 className="font-semibold text-slate-900">Office Address</h4>
                                         <p className="text-slate-500 text-sm leading-relaxed mt-1">
-                                            123 Learning Lane,<br />
-                                            EdTech Suite 400,<br />
-                                            San Francisco, CA 94103
+                                            Flat No. 401, 4th floor,<br />
+                                            Kolan Krishna Reddy Complex, Bachupally,<br />
+                                            Medchal-Malkajgiri district, Telangana - 500090.
                                         </p>
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-4">
                                     <div className="bg-primary/10 p-2 rounded-lg">
-                                        <span className="material-icons text-primary">mail</span>
+                                        <span className="material-symbols-outlined text-primary">mail</span>
                                     </div>
                                     <div>
                                         <h4 className="font-semibold text-slate-900">Support Email</h4>
                                         <p className="text-slate-500 text-sm mt-1">
-                                            support@lms-edu.com
+                                            support@edunura.com
                                         </p>
                                     </div>
                                 </div>
                                 <div className="flex items-start gap-4">
                                     <div className="bg-primary/10 p-2 rounded-lg">
-                                        <span className="material-icons text-primary">phone</span>
+                                        <span className="material-symbols-outlined text-primary">phone</span>
                                     </div>
                                     <div>
                                         <h4 className="font-semibold text-slate-900">Phone Number</h4>
                                         <p className="text-slate-500 text-sm mt-1">
-                                            +1 (555) 000-1234
+                                            +91 9502331577
                                         </p>
                                     </div>
                                 </div>
@@ -98,13 +98,13 @@ const ContactPage = () => {
                                 <h4 className="font-semibold text-slate-900 mb-4">Follow Our Updates</h4>
                                 <div className="flex gap-4">
                                     <a className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-primary hover:text-white transition-all" href="#">
-                                        <span className="material-icons text-sm">public</span>
+                                        <span className="material-symbols-outlined text-sm">public</span>
                                     </a>
                                     <a className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-primary hover:text-white transition-all" href="#">
-                                        <span className="material-icons text-sm">alternate_email</span>
+                                        <span className="material-symbols-outlined text-sm">alternate_email</span>
                                     </a>
                                     <a className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-primary hover:text-white transition-all" href="#">
-                                        <span className="material-icons text-sm">forum</span>
+                                        <span className="material-symbols-outlined text-sm">forum</span>
                                     </a>
                                 </div>
                             </div>
@@ -112,12 +112,16 @@ const ContactPage = () => {
 
                         {/* Map Component (Static representation) */}
                         <div className="rounded-xl overflow-hidden shadow-sm border border-slate-200 h-64 relative group">
-                            <img alt="Map location" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCSwrPUYUrT-BH8iXeaJh_CffMvkmxXfpHkY_QwA_gzfSVdQiCo3AstT47iBdugmBFJDxKKjM5JzClVRlpnhCeo_z6HSGOGC2FuIrfDABAJgxW6cstf7mbtoH8kESfkajEKrzIb77a-VxlLfVtw2MaVJ_vb3nWcc0NVTKXLopiqZqHLkzcPk5Po1z2-61JWQ-kGQqFGwP8z5rzLGY-VIZKzbO1unwfcF14GJ38yCUzdgr4XU8aKjNs9-JNBhCcx_bsGXBsaj5bGKqbD" />
-                            <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
-                                <div className="bg-white p-2 rounded-full shadow-lg">
-                                    <span className="material-icons text-primary text-3xl">location_on</span>
-                                </div>
-                            </div>
+                            <iframe
+                                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3804.3720315179876!2d78.3640896!3d17.5374654!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bcb8dc02a531e87%3A0xeb59992603ecaa03!2sKolan%20Krishna%20Reddy%20Complex%2C%20Nizampet%20Rd%2C%20Bachupally%2C%20Hyderabad%2C%20Telangana%20500118!5e0!3m2!1sen!2sin!4v1771664165980!5m2!1sen!2sin"
+                                width="100%"
+                                height="100%"
+                                style={{ border: 0 }}
+                                allowFullScreen
+                                loading="lazy"
+                                referrerPolicy="no-referrer-when-downgrade"
+                                title="Office Location"
+                            ></iframe>
                         </div>
                     </div>
                 </div>
@@ -125,7 +129,7 @@ const ContactPage = () => {
                 {/* FAQ Quick Link Footer Section */}
                 <div className="mt-20 text-center">
                     <div className="inline-flex items-center gap-3 bg-primary/5 border border-primary/20 px-6 py-4 rounded-xl">
-                        <span className="material-icons text-primary">help_outline</span>
+                        <span className="material-symbols-outlined text-primary">help_outline</span>
                         <p className="text-slate-700">
                             Have a quick question?
                             <a className="text-primary font-bold hover:underline ml-1" href="#">Check our Frequently Asked Questions</a>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     Box,
@@ -24,6 +24,7 @@ import {
     VisibilityOff,
 } from '@mui/icons-material';
 import { authService } from '../../services/authService';
+import { STATIC_ASSETS_BASE_URL, API_BASE_URL } from '../../services/apiClient';
 
 const Login: React.FC = () => {
     const navigate = useNavigate();
@@ -33,6 +34,26 @@ const Login: React.FC = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [orgLogo, setOrgLogo] = useState<string | null>(localStorage.getItem('org_logo') || null);
+    const [siteName, setSiteName] = useState(localStorage.getItem('site_name') || 'LMS Enterprise');
+
+    useEffect(() => {
+        fetch(`${API_BASE_URL}/settings`)
+            .then(r => r.json())
+            .then(data => {
+                const logo = data?.data?.org_logo;
+                if (logo) {
+                    setOrgLogo(logo);
+                    localStorage.setItem('org_logo', logo);
+                }
+                const name = data?.data?.site_name;
+                if (name) {
+                    setSiteName(name);
+                    localStorage.setItem('site_name', name);
+                }
+            })
+            .catch(() => {});
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -78,21 +99,30 @@ const Login: React.FC = () => {
                 >
                     {/* Header Section */}
                     <Box sx={{ px: 4, pt: 5, pb: 3, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                        <Box
-                            sx={{
-                                width: 48,
-                                height: 48,
-                                bgcolor: alpha(theme.palette.primary.main, 0.1),
-                                borderRadius: 2,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                mb: 3,
-                                color: theme.palette.primary.main,
-                            }}
-                        >
-                            <SchoolIcon fontSize="large" />
-                        </Box>
+                        {orgLogo ? (
+                            <Box
+                                component="img"
+                                src={`${STATIC_ASSETS_BASE_URL}${orgLogo.startsWith('/') ? orgLogo : '/' + orgLogo}`}
+                                alt="Logo"
+                                sx={{ height: 80, width: 'auto', maxWidth: '85%', objectFit: 'contain', mb: 3 }}
+                            />
+                        ) : (
+                            <Box
+                                sx={{
+                                    width: 48,
+                                    height: 48,
+                                    bgcolor: alpha(theme.palette.primary.main, 0.1),
+                                    borderRadius: 2,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    mb: 3,
+                                    color: theme.palette.primary.main,
+                                }}
+                            >
+                                <SchoolIcon fontSize="large" />
+                            </Box>
+                        )}
                         <Typography variant="h5" component="h1" sx={{ fontWeight: 700, color: 'text.primary', mb: 1 }}>
                             LMS Teacher Portal
                         </Typography>
@@ -211,7 +241,7 @@ const Login: React.FC = () => {
                 {/* Outside Footer */}
                 <Box sx={{ mt: 4, textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 1 }}>
                     <Typography variant="caption" color="text.secondary">
-                        © 2024 LMS Enterprise. All rights reserved.
+                        © {new Date().getFullYear()} {siteName}. All rights reserved.
                     </Typography>
                     <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2 }}>
                         <Link href="#" variant="caption" color="text.secondary" underline="hover">

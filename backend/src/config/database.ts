@@ -64,15 +64,19 @@ export const connectDatabase = async (): Promise<void> => {
             const rawSql = fs.readFileSync(schemaPath, 'utf8');
 
             // Strip CREATE DATABASE / USE statements (already connected to the DB)
+            // Also strip all SQL line comments (-- ...) BEFORE splitting so that
+            // CREATE TABLE statements whose chunk starts with a "-- Table: x" comment
+            // are not accidentally filtered out.
             const cleanedSql = rawSql
                 .replace(/^\s*CREATE\s+DATABASE\b.*?;/gim, '')
-                .replace(/^\s*USE\s+\S+\s*;/gim, '');
+                .replace(/^\s*USE\s+\S+\s*;/gim, '')
+                .replace(/--[^\n]*/g, '');  // remove all single-line comments
 
             // Split on statement-ending semicolons and run each one
             const statements = cleanedSql
-                .split(/;\s*\n/)
+                .split(/;/)
                 .map(s => s.trim())
-                .filter(s => s.length > 0 && !s.startsWith('--'));
+                .filter(s => s.length > 0);
 
             for (const stmt of statements) {
                 if (stmt.trim()) {

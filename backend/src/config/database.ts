@@ -1,5 +1,7 @@
 import { Sequelize, QueryTypes } from 'sequelize';
 import dotenv from 'dotenv';
+import fs from 'fs';
+import path from 'path';
 
 dotenv.config();
 
@@ -47,6 +49,38 @@ export const connectDatabase = async (): Promise<void> => {
     try {
         await sequelize.authenticate();
         console.log('✅ Database connection established successfully.');
+
+        // Check if schema needs to be initialized (first run / fresh DB)
+        const usersTableCheck = await sequelize.query(`
+            SELECT COUNT(*) as count
+            FROM information_schema.tables
+            WHERE table_schema = '${process.env.DB_NAME || 'lms_database'}'
+            AND table_name = 'users'
+        `, { type: QueryTypes.SELECT }) as any;
+
+        if (usersTableCheck[0].count === 0) {
+            console.log('⚙️  No schema detected — running initial database setup...');
+            const schemaPath = path.join(__dirname, '../../database/schema.sql');
+            const rawSql = fs.readFileSync(schemaPath, 'utf8');
+
+            // Strip CREATE DATABASE / USE statements (already connected to the DB)
+            const cleanedSql = rawSql
+                .replace(/^\s*CREATE\s+DATABASE\b.*?;/gim, '')
+                .replace(/^\s*USE\s+\S+\s*;/gim, '');
+
+            // Split on statement-ending semicolons and run each one
+            const statements = cleanedSql
+                .split(/;\s*\n/)
+                .map(s => s.trim())
+                .filter(s => s.length > 0 && !s.startsWith('--'));
+
+            for (const stmt of statements) {
+                if (stmt.trim()) {
+                    await sequelize.query(stmt);
+                }
+            }
+            console.log('✅ Database schema initialized successfully.');
+        }
 
         // Create only the new lesson_progress table if it doesn't exist
         // Don't sync existing tables to avoid index conflicts

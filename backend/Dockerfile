@@ -35,6 +35,9 @@ RUN apk add --no-cache python3 make g++ \
 # Copy compiled output from builder
 COPY --from=builder /app/dist ./dist
 
+# Schema file for auto-initialization on first run
+COPY database ./database
+
 # Uploads directory (bind-mounted as Docker volume in production)
 RUN mkdir -p uploads
 

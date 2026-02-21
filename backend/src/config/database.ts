@@ -58,7 +58,7 @@ export const connectDatabase = async (): Promise<void> => {
             AND table_name = 'users'
         `, { type: QueryTypes.SELECT }) as any;
 
-        if (usersTableCheck[0].count === 0) {
+        if (Number(usersTableCheck[0].count) === 0) {
             console.log('⚙️  No schema detected — running initial database setup...');
             const schemaPath = path.join(__dirname, '../../database/schema.sql');
             const rawSql = fs.readFileSync(schemaPath, 'utf8');

@@ -1,7 +1,7 @@
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { Op } from 'sequelize';
 import { AuthRequest } from '../../middleware/auth';
-import { Course, CourseSection, Lesson, LessonResource, Enrollment } from '../../models';
+import { Course, CourseSection, Lesson, LessonResource, Enrollment, User } from '../../models';
 import { createCourseFolders, generateSlug, deleteCourseFolders, deleteFile } from '../../utils/folderService';
 import path from 'path';
 import ZoomService from '../../services/zoomService';
@@ -95,6 +95,109 @@ export const createCourse = async (req: AuthRequest, res: Response): Promise<voi
             status: 'error',
             message: error.message || 'Internal server error',
         });
+    }
+};
+
+// ========================================
+// PUBLIC COURSE ENDPOINT (no auth required)
+// ========================================
+export const getPublicCourses = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { page = 1, limit = 12, search, category, level } = req.query;
+        const offset = (Number(page) - 1) * Number(limit);
+
+        const whereClause: any = { status: 'published' };
+
+        if (search) {
+            whereClause[Op.or] = [
+                { title: { [Op.like]: `%${search}%` } },
+                { short_description: { [Op.like]: `%${search}%` } },
+            ];
+        }
+        if (category) whereClause.category = category;
+        if (level) whereClause.level = level;
+
+        const { count, rows } = await Course.findAndCountAll({
+            where: whereClause,
+            attributes: ['id', 'title', 'slug', 'short_description', 'thumbnail', 'price', 'discounted_price', 'is_free', 'level', 'category', 'total_enrollments', 'rating', 'total_reviews'],
+            limit: Number(limit),
+            offset,
+            order: [['created_at', 'DESC']],
+            include: [
+                {
+                    model: User,
+                    as: 'creator',
+                    attributes: ['id', 'first_name', 'last_name', 'avatar'],
+                },
+            ],
+        });
+
+        res.status(200).json({
+            status: 'success',
+            data: {
+                courses: rows,
+                total: count,
+                page: Number(page),
+                pages: Math.ceil(count / Number(limit)),
+            },
+        });
+    } catch (error: any) {
+        console.error('Get Public Courses Error:', error);
+        res.status(500).json({
+            status: 'error',
+            message: error.message || 'Internal server error',
+        });
+    }
+};
+
+export const getPublicCourseDetail = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+
+        const course = await Course.findOne({
+            where: { id, status: 'published' },
+            attributes: [
+                'id', 'title', 'slug', 'description', 'short_description', 'thumbnail',
+                'intro_video', 'price', 'discounted_price', 'is_free', 'level', 'category',
+                'total_enrollments', 'rating', 'total_reviews', 'outcomes', 'prerequisites',
+                'enable_certificate', 'duration_hours', 'validity_period', 'updated_at',
+            ],
+            include: [
+                {
+                    model: User,
+                    as: 'creator',
+                    attributes: ['id', 'first_name', 'last_name', 'avatar'],
+                },
+                {
+                    model: CourseSection,
+                    as: 'sections',
+                    required: false,
+                    attributes: ['id', 'title', 'order'],
+                    include: [
+                        {
+                            model: Lesson,
+                            as: 'lessons',
+                            required: false,
+                            attributes: ['id', 'title', 'content_type', 'duration', 'order', 'is_free_preview'],
+                        },
+                    ],
+                },
+            ],
+            order: [
+                [{ model: CourseSection, as: 'sections' }, 'order', 'ASC'],
+                [{ model: CourseSection, as: 'sections' }, { model: Lesson, as: 'lessons' }, 'order', 'ASC'],
+            ],
+        });
+
+        if (!course) {
+            res.status(404).json({ status: 'error', message: 'Course not found' });
+            return;
+        }
+
+        res.status(200).json({ status: 'success', data: course });
+    } catch (error: any) {
+        console.error('Get Public Course Detail Error:', error);
+        res.status(500).json({ status: 'error', message: error.message || 'Internal server error' });
     }
 };
 

@@ -19,19 +19,15 @@ const Header = () => {
                         <input className="h-10 w-48 rounded-md border border-slate-200 pl-4 pr-10 text-sm focus:border-primary focus:ring-primary" placeholder="Search" type="text" />
                         <span className="material-symbols-outlined absolute right-3 top-2.5 text-lg text-slate-400">search</span>
                     </div>
-                    <div className="relative cursor-pointer">
-                        <span className="material-symbols-outlined text-secondary">shopping_cart</span>
-                        <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">0</span>
-                    </div>
-                    <button className="hidden sm:block h-10 rounded-md bg-primary px-4 lg:px-6 text-sm font-semibold text-white hover:bg-orange-600 transition-colors whitespace-nowrap">
-                        Enroll Now
-                    </button>
+                    <a href={`${process.env.NEXT_PUBLIC_STUDENT_APP_URL}/login`} className="hidden sm:inline-flex items-center h-10 rounded-md bg-primary px-4 lg:px-6 text-sm font-semibold text-white hover:bg-orange-600 transition-colors whitespace-nowrap">
+                        Login
+                    </a>
                     {/* Mobile Menu Toggle (Simplified) */}
                     <button className="lg:hidden p-2 text-secondary">
                         <span className="material-symbols-outlined">menu</span>
                     </button>
                 </div>
-            </div>
+            </div> 
         </header>
     );
 };

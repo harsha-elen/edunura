@@ -5,7 +5,7 @@ const Footer = () => {
         <footer className="bg-secondary pt-16 pb-8 text-white relative overflow-hidden">
             <div className="absolute inset-0 opacity-5 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at center, white 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
             <div className="mx-auto max-w-7xl px-4 lg:px-8 relative z-10">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-12">
                     <div>
                         <div className="flex items-center gap-2 mb-6">
                             <img alt="eduNura Logo" className="h-16 w-auto object-contain brightness-0 invert" src="/images/edunura-font-02.png" />
@@ -30,27 +30,6 @@ const Footer = () => {
                                 <span className="material-symbols-outlined text-sm">play_arrow</span>
                             </a>
                         </div>
-                    </div>
-                    <div>
-                        <h3 className="text-lg font-bold text-white mb-6">Quick Links</h3>
-                        <ul className="space-y-3 text-sm text-slate-300">
-                            <li><a className="hover:text-primary transition-colors" href="#">About</a></li>
-                            <li><a className="hover:text-primary transition-colors" href="#">Course</a></li>
-                            <li><a className="hover:text-primary transition-colors" href="#">Instructor</a></li>
-                            <li><a className="hover:text-primary transition-colors" href="#">Events</a></li>
-                            <li><a className="hover:text-primary transition-colors" href="#">Instructor Details</a></li>
-                            <li><a className="hover:text-primary transition-colors" href="#">Purchase Guide</a></li>
-                        </ul>
-                    </div>
-                    <div>
-                        <h3 className="text-lg font-bold text-white mb-6">Help & Support</h3>
-                        <ul className="space-y-3 text-sm text-slate-300">
-                            <li><a className="hover:text-primary transition-colors" href="#">Contact Us</a></li>
-                            <li><a className="hover:text-primary transition-colors" href="#">Gallery</a></li>
-                            <li><a className="hover:text-primary transition-colors" href="#">News & Articles</a></li>
-                            <li><a className="hover:text-primary transition-colors" href="#">FAQ's</a></li>
-                            <li><a className="hover:text-primary transition-colors" href="#">Coming Soon</a></li>
-                        </ul>
                     </div>
                     <div>
                         <h3 className="text-lg font-bold text-white mb-6">Newsletter Subscription</h3>

@@ -2,6 +2,8 @@ import { Router } from 'express';
 import {
     createCourse,
     getAllCourses,
+    getPublicCourses,
+    getPublicCourseDetail,
     updateCourse,
     getCourseById,
     deleteCourse,
@@ -72,6 +74,8 @@ const setCourseIdFromLesson = async (req: Request, res: Response, next: NextFunc
 // ========================================
 // COURSE ROUTES
 // ========================================
+router.get('/public', getPublicCourses);
+router.get('/public/:id', getPublicCourseDetail);
 router.post('/', authenticate, authorize('admin', 'teacher'), createCourse);
 router.get('/', authenticate, getAllCourses);
 router.get('/:id', authenticate, getCourseById);

@@ -147,14 +147,12 @@ const Dashboard: React.FC = () => {
 
                 // Calculate stats
                 const activeCourses = (courses || []).filter(c => c.status === 'active');
-                const totalProgress = (courses || []).reduce((sum, c) => sum + c.progress_percentage, 0);
-                const avgGrade = (courses || []).length > 0 ? Math.round(totalProgress / (courses || []).length) : 0;
 
                 setStats({
                     coursesInProgress: activeCourses.length,
-                    assignmentsDue: 3,
-                    averageGrade: avgGrade,
-                    studyHours: 12,
+                    assignmentsDue: 0,
+                    averageGrade: 0,
+                    studyHours: 0,
                 });
                 setError(null);
             } catch (err: any) {

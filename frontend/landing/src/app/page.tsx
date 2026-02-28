@@ -46,26 +46,26 @@ export default function Home() {
             Explore Course Categories
           </h2>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="flex flex-col items-center justify-center rounded-xl bg-white p-8 shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-shadow hover:shadow-[0_8px_30px_rgb(0,0,0,0.2)]">
+            <a href="/courses" className="flex flex-col items-center justify-center rounded-xl bg-white p-8 shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-shadow hover:shadow-[0_8px_30px_rgb(0,0,0,0.2)]">
               <span className="material-symbols-outlined mb-6 text-7xl sm:text-9xl lg:text-[120px] text-primary">fitness_center</span>
               <h3 className="text-lg font-bold text-secondary">Fitness</h3>
-            </div>
-            <div className="flex flex-col items-center justify-center rounded-xl bg-white p-8 shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-shadow hover:shadow-[0_8px_30px_rgb(0,0,0,0.2)]">
+            </a>
+            <a href="/courses" className="flex flex-col items-center justify-center rounded-xl bg-white p-8 shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-shadow hover:shadow-[0_8px_30px_rgb(0,0,0,0.2)]">
               <span className="material-symbols-outlined mb-6 text-7xl sm:text-9xl lg:text-[120px] text-primary">theater_comedy</span>
               <h3 className="text-lg font-bold text-secondary">Cultural</h3>
-            </div>
-            <div className="flex flex-col items-center justify-center rounded-xl bg-white p-8 shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-shadow hover:shadow-[0_8px_30px_rgb(0,0,0,0.2)]">
+            </a>
+            <a href="/courses" className="flex flex-col items-center justify-center rounded-xl bg-white p-8 shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-shadow hover:shadow-[0_8px_30px_rgb(0,0,0,0.2)]">
               <span className="material-symbols-outlined mb-6 text-7xl sm:text-9xl lg:text-[120px] text-primary">psychology</span>
               <h3 className="text-lg font-bold text-secondary">Skill Development</h3>
-            </div>
-            <div className="flex flex-col items-center justify-center rounded-xl bg-white p-8 shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-shadow hover:shadow-[0_8px_30px_rgb(0,0,0,0.2)]">
+            </a>
+            <a href="/courses" className="flex flex-col items-center justify-center rounded-xl bg-white p-8 shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-shadow hover:shadow-[0_8px_30px_rgb(0,0,0,0.2)]">
               <span className="material-symbols-outlined mb-6 text-7xl sm:text-9xl lg:text-[120px] text-primary">school</span>
               <h3 className="text-lg font-bold text-secondary">Academics</h3>
-            </div>
+            </a>
           </div>
         </div>
       </section>
-      <div className="relative w-full min-h-[600px] lg:h-[85vh]">
+      <div id="brand-philosophy" className="relative w-full min-h-[600px] lg:h-[85vh]">
         <img alt="Banner" className="absolute inset-0 h-full w-full object-cover object-bottom" src="/images/Untitled-design-9-1.png" />
         <div className="absolute inset-0 flex flex-col lg:grid lg:grid-cols-2 lg:items-center bg-black/20 lg:bg-transparent">
           <div className="flex-1 flex items-center justify-center p-6 sm:p-10 lg:p-16 text-center lg:text-right lg:justify-end">
@@ -134,50 +134,7 @@ export default function Home() {
           </button>
         </div>
       </section>
-      <section className="bg-[#f0f8ff] relative overflow-hidden py-24 px-4 lg:px-8">
-        <div className="absolute left-0 top-0 h-full w-1/3 bg-gradient-to-r from-purple-100/50 to-transparent blur-3xl"></div>
-        <div className="mx-auto max-w-7xl grid lg:grid-cols-2 gap-16 relative z-10">
-          <div>
-            <p className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">YOUR QUESTIONS ANSWERED</p>
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-primary mb-12">Common questions</h2>
-            <div className="space-y-6">
-              <div className="border-b border-slate-300 pb-4">
-                <button className="flex w-full items-center justify-between text-left text-lg font-bold text-secondary">
-                  What is your approach to social media?
-                </button>
-              </div>
-              <div className="border-b border-slate-300 pb-4">
-                <button className="flex w-full items-center justify-between text-left text-lg font-bold text-secondary">
-                  What is your approach to branding?
-                </button>
-              </div>
-              <div className="border-b border-slate-300 pb-4">
-                <button className="flex w-full items-center justify-between text-left text-lg font-bold text-secondary">
-                  What is your approach to web design?
-                </button>
-              </div>
-              <div className="border-b border-slate-300 pb-4">
-                <button className="flex w-full items-center justify-between text-left text-lg font-bold text-secondary">
-                  What is your approach to influencer marketing?
-                </button>
-              </div>
-              <div className="border-b border-slate-300 pb-4">
-                <button className="flex w-full items-center justify-between text-left text-lg font-bold text-secondary">
-                  What is your approach to influencer marketing?
-                </button>
-              </div>
-            </div>
-          </div>
-          <div className="relative h-full min-h-[300px] sm:min-h-[400px]">
-            <div className="absolute top-0 left-0 w-40 h-40 sm:w-64 sm:h-64 overflow-hidden rounded-[40px_10px_60px_20px]">
-              <img alt="Student smiling" className="h-full w-full object-cover" src="/images/student.jpeg" />
-            </div>
-            <div className="absolute bottom-0 right-4 sm:right-10 w-40 h-40 sm:w-64 sm:h-64 overflow-hidden rounded-[10px_80px_20px_60px] border-4 border-white shadow-xl">
-              <img alt="Classroom" className="h-full w-full object-cover grayscale hover:grayscale-0 transition-all duration-500" src="/images/class-room.jpeg" />
-            </div>
-          </div>
-        </div>
-      </section>
+
     </>
   );
 }

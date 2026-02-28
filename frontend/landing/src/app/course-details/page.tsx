@@ -364,9 +364,20 @@ const CourseDetailsContent = () => {
                                         {discountPct > 0 && <span className="text-xs font-bold text-white bg-red-500 px-2 py-1 rounded">{discountPct}% OFF</span>}
                                     </div>
                                     <div className="flex flex-col gap-3 mb-6">
-                                        <a href={`${STUDENT_APP_URL}/checkout/${course.id}`} className="w-full bg-primary hover:bg-orange-600 text-white font-bold py-3.5 px-4 rounded-lg transition-colors shadow-md shadow-primary/20 text-lg text-center block">
+                                        <button onClick={() => {
+                                            const token = localStorage.getItem('token');
+                                            if (token) {
+                                                window.location.href = `${STUDENT_APP_URL}/checkout/${course.id}`;
+                                            } else {
+                                                // Extract just the path for returnTo (remove domain)
+                                                const checkoutPath = `/checkout/${course.id}`;
+                                                // Construct the login URL with the path parameter
+                                                const loginUrl = `${STUDENT_APP_URL}/login?returnTo=${encodeURIComponent(checkoutPath)}`;
+                                                window.location.href = loginUrl;
+                                            }
+                                        }} className="w-full bg-primary hover:bg-orange-600 text-white font-bold py-3.5 px-4 rounded-lg transition-colors shadow-md shadow-primary/20 text-lg text-center block cursor-pointer border-none">
                                             Enroll Now
-                                        </a>
+                                        </button>
                                     </div>
                                     <p className="text-xs text-center text-slate-500 mb-6 font-display">30-Day Money-Back Guarantee</p>
                                     <div className="space-y-4">

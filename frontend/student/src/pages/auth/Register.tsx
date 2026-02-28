@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link as RouterLink } from 'react-router-dom';
+import { useNavigate, Link as RouterLink, useLocation } from 'react-router-dom';
 import {
     Box,
     Paper,
@@ -30,6 +30,7 @@ import { STATIC_ASSETS_BASE_URL, API_BASE_URL } from '../../services/apiClient';
 
 const Register: React.FC = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const theme = useTheme();
 
     // Form State
@@ -47,6 +48,25 @@ const Register: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [orgLogo, setOrgLogo] = useState<string | null>(localStorage.getItem('org_logo') || null);
     const [siteName, setSiteName] = useState(localStorage.getItem('site_name') || 'LMS Portal');
+
+    // Handle returnTo parameter
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        let returnToParam = params.get('returnTo');
+        
+        if (returnToParam) {
+            // If returnTo is an absolute URL, extract just the path
+            try {
+                if (returnToParam.startsWith('http://') || returnToParam.startsWith('https://')) {
+                    const url = new URL(returnToParam);
+                    returnToParam = url.pathname + url.search + url.hash;
+                }
+            } catch (e) {
+                // If URL parsing fails, use as-is
+            }
+            localStorage.setItem('authReturnTo', returnToParam);
+        }
+    }, [location]);
 
     useEffect(() => {
         fetch(`${API_BASE_URL}/settings`)
@@ -125,11 +145,20 @@ const Register: React.FC = () => {
             localStorage.setItem('token', token);
             localStorage.setItem('user', JSON.stringify(user));
 
-            // Show success message briefly
-            setSuccess('Account created successfully! Redirecting to dashboard...');
+            const returnTo = localStorage.getItem('authReturnTo');
+            
+            // Clear returnTo from storage
+            if (returnTo) {
+                localStorage.removeItem('authReturnTo');
+            }
 
-            // Redirect to dashboard immediately
-            navigate('/dashboard', { replace: true });
+            setSuccess('Account created successfully! Redirecting...');
+
+            // Use a small delay to ensure state updates complete before navigation
+            setTimeout(() => {
+                const redirectPath = returnTo || '/dashboard';
+                navigate(redirectPath, { replace: true });
+            }, 100);
 
         } catch (err: any) {
             setError(err.response?.data?.message || err.message || 'Registration failed. Please try again.');

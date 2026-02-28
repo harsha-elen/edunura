@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import User, { UserRole } from '../../models/User';
-import { Op } from 'sequelize';
+import Enrollment from '../../models/Enrollment';
+import sequelize from '../../config/database';
+import { Op, QueryTypes } from 'sequelize';
 
 // Get all teachers
 export const getAllTeachers = async (req: Request, res: Response) => {
@@ -197,8 +199,8 @@ export const updateTeacher = async (req: Request, res: Response) => {
 export const deleteTeacher = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
+        const { type } = req.query; // 'soft' or 'permanent'
 
-        // Find teacher
         const teacher = await User.findOne({
             where: {
                 id,
@@ -213,17 +215,30 @@ export const deleteTeacher = async (req: Request, res: Response) => {
             });
         }
 
-        // Soft delete - set is_active to false
-        teacher.is_active = false;
-        await teacher.save();
-
-        // Or hard delete if preferred:
-        // await teacher.destroy();
-
-        return res.status(200).json({
-            status: 'success',
-            message: 'Teacher deleted successfully',
-        });
+        if (type === 'permanent') {
+            // Delete courses created by teacher first
+            await Enrollment.destroy({
+                where: { student_id: teacher.id }
+            }).catch(() => {}); // Ignore if no enrollments
+            // Delete lesson progress
+            await sequelize.query(
+                `DELETE FROM lesson_progress WHERE student_id = ${teacher.id}`,
+                { type: QueryTypes.DELETE }
+            ).catch(() => {}); // Ignore if table doesn't exist
+            await teacher.destroy();
+            return res.status(200).json({
+                status: 'success',
+                message: 'Teacher permanently deleted successfully',
+            });
+        } else {
+            // Soft delete - set is_active to false
+            teacher.is_active = false;
+            await teacher.save();
+            return res.status(200).json({
+                status: 'success',
+                message: 'Teacher deleted successfully',
+            });
+        }
     } catch (error: any) {
         console.error('Error deleting teacher:', error);
         return res.status(500).json({

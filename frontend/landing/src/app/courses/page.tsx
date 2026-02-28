@@ -59,10 +59,8 @@ const SkeletonCard = () => (
 );
 
 // ---- Course Card ----
-const CourseCard = ({ course }: { course: Course }) => {
-    const instructorName = course.creator
-        ? `${course.creator.first_name} ${course.creator.last_name}`
-        : 'Instructor';
+const CourseCard = ({ course, siteName }: { course: Course; siteName: string }) => {
+    const instructorName = siteName ? `by ${siteName} Team` : 'Instructor';
 
     const instructorAvatar = course.creator?.avatar
         ? `${BACKEND_URL}${course.creator.avatar.startsWith('/') ? '' : '/'}${course.creator.avatar}`
@@ -132,10 +130,10 @@ const CourseCard = ({ course }: { course: Course }) => {
                 )}
                 <div className="flex items-center gap-2 mt-auto mb-4">
                     {instructorAvatar ? (
-                        <img className="w-7 h-7 rounded-full object-cover border border-slate-100" src={instructorAvatar} alt={instructorName} />
+                        <img className="w-7 h-7 rounded-full object-cover border border-slate-100" src={instructorAvatar} alt={siteName} />
                     ) : (
                         <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center">
-                            <span className="text-primary text-xs font-bold">{instructorName.charAt(0)}</span>
+                            <span className="text-primary text-xs font-bold">E</span>
                         </div>
                     )}
                     <span className="text-xs font-medium text-slate-600 font-display">{instructorName}</span>
@@ -169,7 +167,19 @@ const CoursesPage = () => {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [total, setTotal] = useState(0);
+    const [siteName, setSiteName] = useState('Edunura');
     const LIMIT = 12;
+
+    // Load site name from settings API
+    useEffect(() => {
+        fetch(`${API_URL}/settings`)
+            .then(r => r.json())
+            .then(data => {
+                const name = data?.data?.site_name;
+                if (name) setSiteName(name);
+            })
+            .catch(() => {});
+    }, []);
 
     const fetchCourses = useCallback(async (searchTerm: string, pageNum: number) => {
         setLoading(true);
@@ -269,7 +279,7 @@ const CoursesPage = () => {
                     {!error && (
                         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                             {courses.map((course) => (
-                                <CourseCard key={course.id} course={course} />
+                                <CourseCard key={course.id} course={course} siteName={siteName} />
                             ))}
                             {loading && Array.from({ length: page === 1 ? 6 : 3 }).map((_, i) => (
                                 <SkeletonCard key={`skeleton-${i}`} />

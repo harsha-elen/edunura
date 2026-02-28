@@ -2,13 +2,14 @@ import React from 'react';
 
 const Footer = () => {
     return (
-        <footer className="bg-secondary pt-16 pb-8 text-white relative overflow-hidden">
+        <footer className="bg-secondary pt-12 sm:pt-16 pb-8 text-white relative overflow-hidden">
             <div className="absolute inset-0 opacity-5 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at center, white 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
-            <div className="mx-auto max-w-7xl px-4 lg:px-8 relative z-10">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-12">
+            <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 sm:gap-12 mb-12">
+                    {/* Company Info */}
                     <div>
                         <div className="flex items-center gap-2 mb-6">
-                            <img alt="eduNura Logo" className="h-16 w-auto object-contain brightness-0 invert" src="/images/edunura-font-02.png" />
+                            <img alt="eduNura Logo" className="h-12 sm:h-16 w-auto object-contain brightness-0 invert" src="/images/edunura-font-02.png" />
                         </div>
                         <p className="text-sm text-slate-300 leading-relaxed mb-6">
                             From anywhere to everywhere, EduNura brings education to your fingertips. We believe that true education is a journey of curiosity, clarity, and confidence.
@@ -20,7 +21,7 @@ const Footer = () => {
                             <a className="flex h-8 w-8 items-center justify-center rounded-full bg-[#e8cdba] text-secondary hover:bg-primary hover:text-white transition-colors" href="#">
                                 <span className="text-xs font-bold">in</span>
                             </a>
-                            <a className="flex h-8 w-8 items-center justify-center rounded-full bg-[#e8cdba] text-secondary hover:bg-primary hover:text-white transition-colors" href="#">
+                            <a className="flex h-8 w-8 items-center justify-center rounded-full bg-[#e8cdba] text-secondary hover:bg-primary hover:text-white transition-colors" href="https://www.instagram.com/edunura_?igsh=MWd3emVwYXZvZ2VmMg==" target="_blank" rel="noopener noreferrer">
                                 <span className="text-xs font-bold">ig</span>
                             </a>
                             <a className="flex h-8 w-8 items-center justify-center rounded-full bg-[#e8cdba] text-secondary hover:bg-primary hover:text-white transition-colors" href="#">
@@ -31,27 +32,29 @@ const Footer = () => {
                             </a>
                         </div>
                     </div>
+                    
+                    {/* Newsletter & Contact */}
                     <div>
-                        <h3 className="text-lg font-bold text-white mb-6">Newsletter Subscription</h3>
+                        <h3 className="text-lg font-bold text-white mb-4 sm:mb-6">Newsletter Subscription</h3>
                         <p className="text-sm text-slate-300 mb-4">Enter your email address to register to our newsletter subscription</p>
-                        <div className="flex gap-2 mb-6">
-                            <input className="w-full rounded bg-white px-3 py-2 text-sm text-secondary focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Your email" type="email" />
-                            <button className="bg-primary px-4 py-2 text-sm font-bold text-white rounded hover:bg-orange-600 transition-colors flex items-center gap-1">
+                        <div className="flex flex-col sm:flex-row gap-2 mb-6">
+                            <input className="flex-1 rounded bg-white px-3 py-2 text-sm text-secondary focus:outline-none focus:ring-2 focus:ring-primary" placeholder="Your email" type="email" />
+                            <button className="bg-primary px-4 py-2 text-sm font-bold text-white rounded hover:bg-orange-600 transition-colors flex items-center justify-center gap-1 whitespace-nowrap">
                                 Subscribe <span className="material-symbols-outlined text-sm">arrow_forward</span>
                             </button>
                         </div>
-                        <div className="space-y-2 text-sm text-slate-300">
+                        <div className="space-y-3 text-sm text-slate-300">
                             <div className="flex items-center gap-2">
-                                <span className="material-symbols-outlined text-lg text-primary">call</span>
-                                <span>+91 9502331577</span>
+                                <span className="material-symbols-outlined text-lg text-primary shrink-0">call</span>
+                                <span>+91 80190 28822</span>
                             </div>
                             <div className="flex items-start gap-2">
-                                <span className="material-symbols-outlined text-lg text-primary mt-1">mail</span>
-                                <span>support@edunura.com</span>
+                                <span className="material-symbols-outlined text-lg text-primary mt-0.5 shrink-0">mail</span>
+                                <span>edunuraa@gmail.com</span>
                             </div>
                             <div className="flex items-start gap-2">
-                                <span className="material-symbols-outlined text-lg text-primary mt-1">location_on</span>
-                                <span>Flat No. 401, 4th floor, Kolan Krishna Reddy Complex, Bachupally, Medchal-Malkajgiri district, Telangana - 500090.</span>
+                                <span className="material-symbols-outlined text-lg text-primary mt-0.5 shrink-0">location_on</span>
+                                <span className="text-xs sm:text-sm">Flat No. 401, 4th floor, Kolan Krishna Reddy Complex, Bachupally, Medchal-Malkajgiri district, Telangana - 500090.</span>
                             </div>
                         </div>
                     </div>

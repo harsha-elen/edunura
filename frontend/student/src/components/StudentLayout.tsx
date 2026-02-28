@@ -214,6 +214,30 @@ const StudentLayout: React.FC = () => {
                 <Button
                     fullWidth
                     variant="contained"
+                    onClick={() => {
+                        // Redirect to landing page courses
+                        // Construct the landing URL based on current domain
+                        const currentUrl = window.location.href;
+                        let coursesUrl = '';
+                        
+                        // Check if we're in path mode (/app) or subdomain mode
+                        if (window.location.pathname.startsWith('/app')) {
+                            // Path mode: remove /app from current domain
+                            const protocol = window.location.protocol;
+                            const host = window.location.host;
+                            coursesUrl = `${protocol}//${host}/courses`;
+                        } else {
+                            // Subdomain mode: redirect to root domain courses
+                            const host = window.location.host;
+                            const protocol = window.location.protocol;
+                            
+                            // Remove 'app' subdomain if present
+                            const hostWithoutApp = host.replace(/^app\./, '');
+                            coursesUrl = `${protocol}//${hostWithoutApp}/courses`;
+                        }
+                        
+                        window.location.href = coursesUrl;
+                    }}
                     sx={{
                         bgcolor: theme.palette.primary.main,
                         color: 'white',

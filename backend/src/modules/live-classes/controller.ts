@@ -7,6 +7,7 @@ import Course from '../../models/Course';
 import Lesson, { LessonType } from '../../models/Lesson';
 import CourseSection from '../../models/CourseSection';
 import User, { UserRole } from '../../models/User';
+import { getSystemTimezone, parseNaiveDateInTimezone, utcToNaiveLocal } from '../../utils/timezone';
 
 export const createLiveClass = async (req: Request, res: Response) => {
     const errors = validationResult(req);
@@ -31,6 +32,9 @@ export const createLiveClass = async (req: Request, res: Response) => {
             }
         }
 
+        // Get system timezone for proper time handling
+        const systemTz = await getSystemTimezone();
+
         // Format start_time for Zoom API
         // datetime-local sends format like "2026-02-14T15:30" without seconds
         // Zoom API expects format like "2026-02-14T15:30:00" with timezone specified separately
@@ -41,7 +45,10 @@ export const createLiveClass = async (req: Request, res: Response) => {
         // Remove any Z or timezone offset if present
         formattedStartTime = formattedStartTime.replace(/Z.*$/, '');
 
-        console.log(`[CREATE LIVE CLASS] Original start_time: ${start_time}, Formatted: ${formattedStartTime}`);
+        // Convert naive local time to proper UTC Date for database storage
+        const utcStartDate = parseNaiveDateInTimezone(start_time, systemTz.gmtString);
+
+        console.log(`[CREATE LIVE CLASS] Original start_time: ${start_time}, Formatted: ${formattedStartTime}, UTC: ${utcStartDate.toISOString()}, Timezone: ${systemTz.iana}`);
 
         // Create Zoom Meeting
         const meeting = await ZoomService.createMeeting({
@@ -49,7 +56,7 @@ export const createLiveClass = async (req: Request, res: Response) => {
             start_time: formattedStartTime,
             duration: parseInt(duration),
             agenda: agenda || description,
-            timezone: 'Asia/Kolkata', // TODO: Make this configurable or get from user settings
+            timezone: systemTz.iana,
         });
 
         // Save to Database - LiveSession
@@ -58,7 +65,7 @@ export const createLiveClass = async (req: Request, res: Response) => {
             section_id: section_id ? parseInt(section_id) : null,
             title,
             description,
-            start_time: new Date(start_time),
+            start_time: utcStartDate,
             duration: parseInt(duration),
             meeting_id: meeting.id.toString(),
             start_url: meeting.start_url,
@@ -87,6 +94,7 @@ export const createLiveClass = async (req: Request, res: Response) => {
                 order: nextOrder,
                 is_free_preview: false,
                 is_published: true,
+                start_time: utcStartDate,
             });
 
             return res.status(201).json({
@@ -143,23 +151,30 @@ export const updateLiveClass = async (req: Request, res: Response) => {
             where: { meeting_id: lesson.zoom_meeting_id }
         });
 
-        let effectiveStartTime = start_time;
-        if (!effectiveStartTime && liveSession) {
-            effectiveStartTime = liveSession.start_time.toISOString();
-        }
+        // Get system timezone for proper time handling
+        const systemTz = await getSystemTimezone();
 
-        if (!effectiveStartTime) {
+        // Determine start time for Zoom API (naive local) and DB (UTC Date)
+        let formattedStartTime: string; // For Zoom API (naive local time)
+        let utcStartDate: Date | undefined; // For DB storage
+
+        if (start_time) {
+            // New start_time from frontend — it's a naive local time in system timezone
+            formattedStartTime = start_time;
+            if (!formattedStartTime.includes(':00', formattedStartTime.lastIndexOf(':'))) {
+                formattedStartTime = formattedStartTime + ':00';
+            }
+            formattedStartTime = formattedStartTime.replace(/Z.*$/, '');
+            utcStartDate = parseNaiveDateInTimezone(start_time, systemTz.gmtString);
+        } else if (liveSession) {
+            // Fallback: use existing start_time (UTC in DB), convert to naive local for Zoom
+            utcStartDate = liveSession.start_time;
+            formattedStartTime = utcToNaiveLocal(liveSession.start_time, systemTz.gmtString);
+        } else {
             return res.status(400).json({ status: 'error', message: 'Start time is required' });
         }
 
-        // Format start_time for Zoom API
-        let formattedStartTime = effectiveStartTime;
-        if (!formattedStartTime.includes(':00', formattedStartTime.lastIndexOf(':'))) {
-            formattedStartTime = formattedStartTime + ':00';
-        }
-        formattedStartTime = formattedStartTime.replace(/Z.*$/, '');
-
-        console.log(`[UPDATE LIVE CLASS] Updating lesson ${lessonId}, Zoom meeting ${lesson.zoom_meeting_id}`);
+        console.log(`[UPDATE LIVE CLASS] Updating lesson ${lessonId}, Zoom meeting ${lesson.zoom_meeting_id}, UTC: ${utcStartDate?.toISOString()}, Timezone: ${systemTz.iana}`);
 
         // Update Zoom Meeting
         await ZoomService.updateMeeting(lesson.zoom_meeting_id, {
@@ -167,7 +182,7 @@ export const updateLiveClass = async (req: Request, res: Response) => {
             start_time: formattedStartTime,
             duration: parseInt(duration),
             agenda: description,
-            timezone: 'Asia/Kolkata',
+            timezone: systemTz.iana,
         });
 
         // Update Lesson in database
@@ -175,6 +190,7 @@ export const updateLiveClass = async (req: Request, res: Response) => {
             title,
             content_body: description,
             duration: parseInt(duration),
+            ...(utcStartDate ? { start_time: utcStartDate } : {}),
         });
 
         // Update LiveSession if exists
@@ -182,7 +198,7 @@ export const updateLiveClass = async (req: Request, res: Response) => {
             await liveSession.update({
                 title,
                 description,
-                start_time: start_time ? new Date(start_time) : liveSession.start_time,
+                start_time: utcStartDate || liveSession.start_time,
                 duration: parseInt(duration),
             });
         }

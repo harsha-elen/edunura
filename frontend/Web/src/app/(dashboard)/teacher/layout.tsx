@@ -2,14 +2,8 @@
 
 import React from 'react';
 import RoleGuard from '@/components/shared/RoleGuard';
+import TeacherLayoutComponent from '@/components/teacher/TeacherLayoutComponent';
 
-/**
- * Teacher portal layout — wraps all /teacher/* routes.
- * Uses RoleGuard to ensure only teacher users can access.
- * 
- * The actual TeacherLayout sidebar component will be ported here from
- * teacher/src/components/TeacherLayout.tsx in Phase 6.
- */
 export default function TeacherLayout({
     children,
 }: {
@@ -17,10 +11,9 @@ export default function TeacherLayout({
 }) {
     return (
         <RoleGuard allowedRoles={['teacher']}>
-            {/* TeacherLayout sidebar will go here */}
-            <div style={{ minHeight: '100vh' }}>
+            <TeacherLayoutComponent>
                 {children}
-            </div>
+            </TeacherLayoutComponent>
         </RoleGuard>
     );
 }

@@ -16,6 +16,13 @@ export interface UpdateProfileData {
     first_name?: string;
     last_name?: string;
     phone?: string;
+    bio?: string;
+    location?: string;
+    address_line?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    pincode?: string;
 }
 
 export interface ChangePasswordData {

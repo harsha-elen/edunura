@@ -4,8 +4,6 @@
  * This prevents Tailwind v4 preflight from overriding MUI component styles.
  */
 @import "tailwindcss" layer(tailwind);
-/* React-Quill rich text editor styles */
-@import "react-quill/dist/quill.snow.css";
 
 @layer tailwind {
   @theme inline {

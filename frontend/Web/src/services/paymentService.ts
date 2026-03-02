@@ -14,3 +14,8 @@ export const getPaymentStatus = async (courseId: string | number) => {
     const response = await apiClient.get(`/payments/${courseId}`);
     return response.data;
 };
+
+export const getPaymentHistory = async () => {
+    const response = await apiClient.get('/payments/history');
+    return response.data.data || [];
+};

@@ -12,6 +12,13 @@ export interface User {
     email: string;
     role: UserRole;
     avatar?: string;
+    phone?: string;
+    bio?: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    zip?: string;
+    country?: string;
 }
 
 interface AuthContextType {

@@ -37,8 +37,8 @@ export interface AvailableStudent {
 // ─── Student-facing APIs ──────────────────────────────────────
 
 export const getEnrollments = async (params?: Record<string, unknown>) => {
-    const response = await apiClient.get('/enrollments', { params });
-    return response.data;
+    const response = await apiClient.get('/enrollments/my-courses', { params });
+    return response.data.data || [];
 };
 
 export const enrollInCourse = async (courseId: string | number) => {

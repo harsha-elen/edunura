@@ -1,4 +1,4 @@
-import apiClient from './apiClient';
+import apiClient, { STATIC_ASSETS_BASE_URL } from './apiClient';
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -183,6 +183,73 @@ export const deleteLessonResource = async (resourceId: number) => {
 export const getLiveClassSignature = async (meetingId: string) => {
     const response = await apiClient.get(`/live-classes/${meetingId}/join-token`);
     return response.data;
+};
+
+// ─── Student Progress ─────────────────────────────────────────
+
+export interface CourseWithSections {
+    id: number;
+    title: string;
+    slug: string;
+    description?: string;
+    short_description?: string;
+    thumbnail?: string;
+    category?: string;
+    level?: string;
+    duration_hours?: number;
+    price?: number;
+    discounted_price?: number;
+    is_free?: boolean;
+    instructors?: any[];
+    sections: (Section & { lessons: Lesson[] })[];
+    status?: string;
+    visibility?: string;
+}
+
+export interface CourseProgress {
+    course_id: number;
+    total_lessons: number;
+    completed_lessons: number;
+    progress_percentage: number;
+    completed_lesson_ids: number[];
+    enrollment_status: string;
+}
+
+export const getCourseWithCurriculum = async (courseId: number): Promise<{ status: string; data: CourseWithSections }> => {
+    const response = await apiClient.get(`/courses/${courseId}`);
+    return response.data;
+};
+
+export const getCourseProgress = async (courseId: number): Promise<{ status: string; data: CourseProgress }> => {
+    const response = await apiClient.get(`/courses/${courseId}/progress`);
+    return response.data;
+};
+
+export const markLessonComplete = async (courseId: number, lessonId: number) => {
+    const response = await apiClient.post(`/courses/${courseId}/lessons/${lessonId}/complete`);
+    return response.data;
+};
+
+export const markLessonIncomplete = async (courseId: number, lessonId: number) => {
+    const response = await apiClient.delete(`/courses/${courseId}/lessons/${lessonId}/complete`);
+    return response.data;
+};
+
+export const getVideoUrl = (videoPath: string | null | undefined): string | null => {
+    if (!videoPath) return null;
+    if (videoPath.startsWith('http')) return videoPath;
+    return `${STATIC_ASSETS_BASE_URL}/${videoPath}`;
+};
+
+export const getResourceUrl = (resourcePath: string): string => {
+    if (resourcePath.startsWith('http')) return resourcePath;
+    return `${STATIC_ASSETS_BASE_URL}/${resourcePath}`;
+};
+
+export const getThumbnailUrl = (thumbnail: string | null | undefined): string | null => {
+    if (!thumbnail) return null;
+    if (thumbnail.startsWith('http')) return thumbnail;
+    return `${STATIC_ASSETS_BASE_URL}/${thumbnail}`;
 };
 
 // ─── Upload ───────────────────────────────────────────────────

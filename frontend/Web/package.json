@@ -42,7 +42,7 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-international-phone": "^4.8.0",
-    "react-quill-new": "^3.8.3",
+    "react-quill-new": "^3.7.0",
     "react-redux": "^9.2.0",
     "react-sortablejs": "^6.1.4",
     "recharts": "^3.7.0",

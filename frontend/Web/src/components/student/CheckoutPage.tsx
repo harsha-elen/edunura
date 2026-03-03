@@ -89,7 +89,7 @@ export default function CheckoutPage({ courseId }: CheckoutPageProps) {
         queryKey: ['course', courseId],
         queryFn: async () => {
             try {
-                const response = await courseService.getCourse(courseId);
+                const response = await courseService.getCourse(courseId, { checkout: 'true' });
                 return response.data || response;
             } catch (err: any) {
                 throw err.response?.data?.message || 'Failed to load course';
@@ -218,17 +218,27 @@ export default function CheckoutPage({ courseId }: CheckoutPageProps) {
         setFormData((prev) => ({ ...prev, country: e.target.value }));
     };
 
-    const saveProfile = async () => {
-        await profileService.updateProfile({
-            first_name: formData.first_name,
-            last_name: formData.last_name,
-            phone: formData.phone,
-            address_line: formData.address_line,
-            city: formData.city,
-            state: formData.state,
-            pincode: formData.pincode,
-            country: formData.country,
-        });
+    const saveProfile = async (): Promise<{ success: boolean; error?: string }> => {
+        try {
+            await profileService.updateProfile({
+                first_name: formData.first_name,
+                last_name: formData.last_name,
+                phone: formData.phone,
+                address_line: formData.address_line,
+                city: formData.city,
+                state: formData.state,
+                pincode: formData.pincode,
+                country: formData.country,
+            });
+            return { success: true };
+        } catch (err: any) {
+            const errorMsg = err.response?.data?.message || err.message || 'Failed to save profile';
+            // Check for session expiration
+            if (err.response?.status === 401) {
+                return { success: false, error: 'Your session has expired. Please log in again.' };
+            }
+            return { success: false, error: errorMsg };
+        }
     };
 
     const handleRazorpayPayment = async () => {
@@ -238,11 +248,31 @@ export default function CheckoutPage({ courseId }: CheckoutPageProps) {
         setError(null);
 
         try {
-            // Save profile first
-            await saveProfile();
+            // Save profile first and check for errors
+            const profileResult = await saveProfile();
+            if (!profileResult.success) {
+                setError(profileResult.error || 'Failed to save profile');
+                if (profileResult.error?.includes('session has expired')) {
+                    // Redirect to login after brief delay
+                    setTimeout(() => router.push(`/login?next=${encodeURIComponent(`/checkout/${courseId}`)}`), 1500);
+                }
+                setEnrollmentLoading(false);
+                return;
+            }
 
             // Create Razorpay order
-            const orderData = await paymentService.createOrder(courseId);
+            let orderData;
+            try {
+                orderData = await paymentService.createOrder(courseId);
+            } catch (err: any) {
+                if (err.response?.status === 401) {
+                    setError('Your session has expired. Please log in again.');
+                    setTimeout(() => router.push(`/login?next=${encodeURIComponent(`/checkout/${courseId}`)}`), 1500);
+                    setEnrollmentLoading(false);
+                    return;
+                }
+                throw err;
+            }
 
             // Open Razorpay checkout modal
             const options = {
@@ -255,23 +285,48 @@ export default function CheckoutPage({ courseId }: CheckoutPageProps) {
                 handler: async function (response: any) {
                     try {
                         // Verify payment on backend
-                        const verifyResult = await paymentService.verifyPayment({
-                            razorpay_order_id: response.razorpay_order_id,
-                            razorpay_payment_id: response.razorpay_payment_id,
-                            razorpay_signature: response.razorpay_signature,
-                        });
+                        let verifyResult;
+                        try {
+                            verifyResult = await paymentService.verifyPayment({
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_signature: response.razorpay_signature,
+                            });
+                        } catch (err: any) {
+                            if (err.response?.status === 401) {
+                                setError('Your session has expired. Please log in to verify your payment.');
+                                sessionStorage.setItem('pendingPaymentVerification', JSON.stringify({
+                                    razorpay_order_id: response.razorpay_order_id,
+                                    razorpay_payment_id: response.razorpay_payment_id,
+                                    razorpay_signature: response.razorpay_signature,
+                                    courseId: courseId,
+                                }));
+                                setTimeout(() => router.push(`/login?next=${encodeURIComponent(`/checkout/${courseId}`)}`), 2000);
+                                setEnrollmentLoading(false);
+                                return;
+                            }
+                            throw err;
+                        }
 
                         if (verifyResult.status === 'success') {
                             setSuccessMessage('Payment successful! Redirecting...');
+                            // Store payment data in session storage (not in URL)
+                            sessionStorage.setItem('lastPayment', JSON.stringify({
+                                orderId: response.razorpay_order_id,
+                                paymentId: response.razorpay_payment_id,
+                                courseId: courseId,
+                            }));
+                            sessionStorage.removeItem('pendingPaymentVerification');
                             setTimeout(() => {
-                                router.push(
-                                    `/purchase-success?orderId=${response.razorpay_order_id}&paymentId=${response.razorpay_payment_id}&courseId=${courseId}`
-                                );
+                                router.push(`/purchase-success?courseId=${courseId}`);
                             }, 1000);
                         }
                     } catch (err: any) {
                         console.error('Payment verification error:', err);
-                        setError(err.response?.data?.message || 'Payment verification failed. Please contact support.');
+                        const errorMsg = err.response?.status === 401
+                            ? 'Your session has expired. Please log in to complete this payment.'
+                            : err.response?.data?.message || 'Payment verification failed. Please contact support.';
+                        setError(errorMsg);
                     } finally {
                         setEnrollmentLoading(false);
                     }
@@ -302,7 +357,13 @@ export default function CheckoutPage({ courseId }: CheckoutPageProps) {
             rzp.open();
         } catch (err: any) {
             console.error('Payment initiation error:', err);
-            setError(err.response?.data?.message || err.message || 'Failed to initiate payment');
+            const errorMsg = err.response?.status === 401
+                ? 'Your session has expired. Please log in again.'
+                : err.response?.data?.message || err.message || 'Failed to initiate payment';
+            setError(errorMsg);
+            if (err.response?.status === 401) {
+                setTimeout(() => router.push(`/login?next=${encodeURIComponent(`/checkout/${courseId}`)}`), 1500);
+            }
             setEnrollmentLoading(false);
         }
     };
@@ -314,13 +375,40 @@ export default function CheckoutPage({ courseId }: CheckoutPageProps) {
         setError(null);
 
         try {
-            await saveProfile();
-            const enrollmentResponse = await enrollmentService.enrollInCourse(courseId);
+            // Save profile first and check for errors
+            const profileResult = await saveProfile();
+            if (!profileResult.success) {
+                setError(profileResult.error || 'Failed to save profile');
+                if (profileResult.error?.includes('session has expired')) {
+                    setTimeout(() => router.push(`/login?next=${encodeURIComponent(`/checkout/${courseId}`)}`), 1500);
+                }
+                setEnrollmentLoading(false);
+                return;
+            }
+
+            // Enroll in course
+            let enrollmentResponse;
+            try {
+                enrollmentResponse = await enrollmentService.enrollInCourse(courseId);
+            } catch (err: any) {
+                if (err.response?.status === 401) {
+                    setError('Your session has expired. Please log in again.');
+                    setTimeout(() => router.push(`/login?next=${encodeURIComponent(`/checkout/${courseId}`)}`), 1500);
+                    setEnrollmentLoading(false);
+                    return;
+                }
+                throw err;
+            }
 
             if (enrollmentResponse.status === 'success' || enrollmentResponse.enrollment_id) {
                 setSuccessMessage('Successfully enrolled!');
+                // Store enrollment data in session storage
+                sessionStorage.setItem('lastPayment', JSON.stringify({
+                    courseId: courseId,
+                    isPaid: false,
+                }));
                 setTimeout(() => {
-                    router.push(`/purchase-success?courseId=${courseId}&isPaid=false`);
+                    router.push(`/purchase-success?courseId=${courseId}`);
                 }, 1500);
             }
         } catch (err: any) {
@@ -347,9 +435,10 @@ export default function CheckoutPage({ courseId }: CheckoutPageProps) {
         return `${STATIC_ASSETS_BASE_URL}/${thumbnail}`;
     };
 
-    const originalPrice = course?.price ?? 0;
-    const hasDiscount = !!(course?.discounted_price && course.discounted_price > 0 && course.discounted_price < originalPrice);
-    const coursePrice = hasDiscount ? course!.discounted_price! : originalPrice;
+    const originalPrice = Number(course?.price) || 0;
+    const discountedPrice = Number(course?.discounted_price) || 0;
+    const hasDiscount = discountedPrice > 0 && discountedPrice < originalPrice;
+    const coursePrice = hasDiscount ? discountedPrice : originalPrice;
     const isPaidCourse = coursePrice > 0;
 
     const formatINR = (amount: number) => {
@@ -764,11 +853,6 @@ export default function CheckoutPage({ courseId }: CheckoutPageProps) {
                                             <Typography variant="subtitle2" sx={{ fontWeight: 700, color: 'text.primary', lineHeight: 1.4 }}>
                                                 {course?.title}
                                             </Typography>
-                                            <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.5, display: 'block' }}>
-                                                {course?.creator
-                                                    ? `${course.creator.first_name || ''} ${course.creator.last_name || ''}`.trim()
-                                                    : 'Instructor'}
-                                            </Typography>
                                         </Box>
                                         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                                             {hasDiscount && (
@@ -819,10 +903,12 @@ export default function CheckoutPage({ courseId }: CheckoutPageProps) {
                                         Total
                                     </Typography>
                                     <Box sx={{ textAlign: 'right' }}>
-                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.05em', display: 'block', mb: 0.5 }}>
-                                            INR
-                                        </Typography>
-                                        <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary' }}>
+                                        {coursePrice > 0 && (
+                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, letterSpacing: '0.05em', display: 'block', mb: 0.5 }}>
+                                                INR
+                                            </Typography>
+                                        )}
+                                        <Typography variant="h4" sx={{ fontWeight: 700, color: coursePrice === 0 ? 'success.main' : 'text.primary' }}>
                                             {coursePrice === 0 ? 'Free' : formatINR(coursePrice)}
                                         </Typography>
                                     </Box>

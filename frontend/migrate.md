@@ -336,14 +336,119 @@ llo
 
 ---
 
+## Chat 5 — Landing Portal Migration (COMPLETE)
+
+### Phase 21: Landing Layout + Foundation
+- [x] **Created landing layout structure** → `src/app/landing/layout.tsx`
+  - Dedicated layout for all landing pages with Header and Footer by default
+  - Wraps landing routes with flex container for proper footer positioning
+  - Separate from root layout to keep landing styling isolated
+- [x] **Ported Header.tsx** → `src/components/landing/Header.tsx`
+  - Client component with sticky navigation
+  - Links: Home (/), About Us (/landing/about), Courses (/landing/courses), Contact (/landing/contact)
+  - Search bar and Login button
+  - Mobile responsive with hamburger menu
+  - Logo links to home page
+- [x] **Ported Footer.tsx** → `src/components/landing/Footer.tsx`
+  - Client component with newsletter subscription state management
+  - Company info with social media links (Facebook, LinkedIn, Instagram, Twitter, YouTube)
+  - Contact information (phone, email, address)
+  - Copyright notice with site branding
+
+### Phase 22: Landing Pages (5 Pages)
+- [x] **Home Page** → `src/app/landing/page.tsx`
+  - Hero section with student testimonials in 4-grid layout
+  - "OWN IT, LIVE IT, LOVE IT" branding card with logo
+  - Course categories section (Fitness, Cultural, Skill Development, Academics)
+  - Brand Philosophy section with mission statement
+  - Mission card with bullet points
+  - Vision card with aspirational message
+  - CTA section with "Become a Mentor" message
+- [x] **About Page** → `src/app/landing/about/page.tsx` (300+ lines)
+  - Hero section with journey/mission statement
+  - Impact statistics: 50k+ students, 200+ courses, 95% completion rate, 15 partners
+  - Mission & Vision cards with lightbulb and visibility icons
+  - Team member section with 4 staff cards: CEO, COO, CTO, Academic Director
+  - Google Image URLs for team member photos
+  - Social share buttons for each team member
+- [x] **Contact Page** → `src/app/landing/contact/page.tsx`
+  - Contact form with name, email, subject dropdown, message textarea
+  - Contact info sidebar: address, email, phone, social media
+  - Google Maps iframe embed of office location
+  - Responsive 2-column layout (form left, contact info right)
+- [x] **Courses Page** → `src/app/landing/courses/page.tsx`
+  - Course grid listing (1 col mobile → 3 cols desktop)
+  - Search functionality with live filtering
+  - Course cards: thumbnail, category, level, title, description, rating, instructor, price
+  - "Free" badge for free courses
+  - Skeleton loading states
+  - Pagination with "Load More" button
+  - Error handling with retry button
+  - Empty state messaging
+- [x] **Course Details Page** → `src/app/landing/course-details/page.tsx` (450+ lines)
+  - Dynamic course loading via query parameter (id)
+  - Hero section with thumbnail, title, category, level, updated date
+  - Rating display with star visualization
+  - Instructor info with avatar
+  - Enrollment counter
+  - Short description section
+  - "What you'll learn" outcomes with check icons
+  - Full description with whitespace preservation
+  - Prerequisites list with arrow icons
+  - Expandable course content accordion (sections + lessons)
+  - Sticky enrollment widget:
+    - Video preview button with modal
+    - Pricing display with discount percentage
+    - "Enroll Now" button with auth redirects
+    - Course features list (videos, lessons, lifetime access, mobile access, certificate)
+  - Video modal for intro video playback with VideoPlayer component
+  - Loading skeleton states
+  - Error handling with retry button
+
+### Phase 23: Landing Assets & Styling
+- [x] **Copied all landing images** → `/public/images/`
+  - 14 images: student photos, banners, logos, symbols, classroom images, icons
+  - All paths updated to `/images/*` for public directory access
+- [x] **Integrated landing color scheme** → `src/app/globals.css`
+  - Primary color: `#F15A24` (Orange)
+  - Secondary color: `#001A26` (Dark Navy)
+  - Background and surface colors defined
+  - Font families: Inter, Poppins, Quicksand
+  - Root CSS variables for consistent theming
+  - Landing-specific styling separate from dashboard routes
+
+### Phase 24: Cleanup & Link Updates
+- [x] **Updated navigation links** in Header → All routes use `/landing/*` paths
+  - About Us: `/landing/about`
+  - Courses: `/landing/courses`
+  - Contact: `/landing/contact`
+- [x] **Updated course card links** in Courses page
+  - Links to `/landing/course-details?id={courseId}`
+- [x] **Moved course details to landing layout**
+  - Removed `/app/course-details/` (root route version)
+  - Course details now at `/app/landing/course-details/` with header & footer
+- [x] **Updated VideoPlayer** → `src/components/VideoPlayer.tsx`
+  - Changed default brand color to `#F15A24` (landing primary)
+  - Maintained Vidstack integration with Plyr layout
+  - YouTube and Vimeo URL support
+
+### Landing Portal — 100% Complete
+
+| Route | Component | Status |
+|-------|-----------|--------|
+| `/landing` | Home | ✅ |
+| `/landing/about` | About | ✅ |
+| `/landing/contact` | Contact | ✅ |
+| `/landing/courses` | Courses | ✅ |
+| `/landing/course-details` | Course Details | ✅ |
+
+---
+
 ## What Needs To Be Done Next
 
 ### Quiz Builder
 - [ ] Build `src/components/teacher/lessons/QuizLessonUpload.tsx` — currently saves title only (placeholder)
 - [ ] Wire into `AddLessonModal.tsx` `phase === 'quiz'` conditional
-
-### Landing Pages
-- [ ] Port landing site from `frontend/landing/` → integrate into `frontend/Web` or keep separate
 
 ### Final Steps
 - [ ] Update `docker-compose.yml` to serve single frontend (`frontend/Web`)
@@ -377,14 +482,24 @@ frontend/Web/
 ├── public/images/
 ├── src/
 │   ├── app/
-│   │   ├── globals.css
-│   │   ├── layout.tsx
-│   │   ├── page.tsx
+│   │   ├── global              # 14 landing + portal images
+├── src/
+│   ├── app/
+│   │   ├── globals.css         # Landing colors + theme variables
+│   │   ├── layout.tsx          # Root layout (plain, no landing style)
+│   │   ├── page.tsx            # Placeholder root page
 │   │   ├── providers.tsx
 │   │   ├── login/page.tsx
 │   │   ├── checkout/[courseId]/page.tsx     # Student checkout
 │   │   ├── purchase-success/page.tsx        # Purchase confirmation
 │   │   ├── meeting/[meetingId]/page.tsx     # Standalone Zoom meeting
+│   │   ├── landing/                         # NEW: Landing portal with header + footer
+│   │   │   ├── layout.tsx
+│   │   │   ├── page.tsx                     # Home
+│   │   │   ├── about/page.tsx               # About
+│   │   │   ├── contact/page.tsx             # Contact
+│   │   │   ├── courses/page.tsx             # Courses listing
+│   │   │   └── course-details/page.tsx      # Course details
 │   │   └── (dashboard)/
 │   │       ├── layout.tsx
 │   │       ├── admin/
@@ -427,6 +542,9 @@ frontend/Web/
 │   │       ├── learn/page.tsx               # Course player
 │   │       └── lesson/[lessonId]/page.tsx   # Lesson player
 │   ├── components/
+│   │   ├── landing/                         # NEW: Landing components
+│   │   │   ├── Header.tsx
+│   │   │   └── Footer.tsx
 │   │   ├── admin/
 │   │   │   ├── AdminLayoutComponent.tsx
 │   │   │   ├── Dashboard.tsx
@@ -483,7 +601,7 @@ frontend/Web/
 │   │   ├── shared/
 │   │   │   ├── RoleGuard.tsx
 │   │   │   └── ErrorBoundary.tsx
-│   │   └── VideoPlayer.tsx
+│   │   └── VideoPlayer.tsx                  # Landing brand color (#F15A24)
 │   ├── context/
 │   │   ├── AuthContext.tsx
 │   │   └── ThemeContext.tsx
@@ -500,12 +618,37 @@ frontend/Web/
 
 ## Portal Status Summary
 
-| Portal | Pages | Completion | Build | Protected |
-|--------|-------|------------|-------|-----------|
+| Portal | Routes | Completion | Build | Protected |
+|--------|--------|------------|-------|-----------|
 | Admin | 15 routes | ✅ 100% | ✅ Success | ✅ RoleGuard |
 | Teacher | 7 routes | ✅ 100% | ✅ Success | ✅ RoleGuard |
 | Student | 10 routes | ✅ 100% | ✅ Success | ✅ RoleGuard |
-| Landing | - | ⏳ Pending | - | - |
-| **Total** | **32 routes** | **✅ 100%** | **✅ Success** | **✅ All** |
+| Landing | 5 routes | ✅ 100% | ✅ Success | ✅ Public |
+| **Total** | **37 routes** | **✅ 100%** | **✅ Success** | **✅ All** |
 
-**Frontend consolidation complete:** All 4 Vite portals (Admin, Teacher, Student, Landing) successfully migrated to single Next.js 16 App Router application with role-based routing, shared services, theme integration, and MUI v7 UI.
+---
+
+## Summary of Completion
+
+**All 4 portals successfully consolidated into single Next.js 16 App Router application:**
+- ✅ **Admin Portal** — 15 routes with full course management, user administration, live sessions, settings
+- ✅ **Teacher Portal** — 7 routes with curriculum editing, live class scheduling, calendar management
+- ✅ **Student Portal** — 10 routes with course player, checkout flow, progress tracking, live classes
+- ✅ **Landing Portal** — 5 routes with public course discovery, course details, contact form, about pages
+
+**Key Features Complete:**
+- Role-based routing with RoleGuard middleware
+- Unified API services and TypeScript types
+- MUI v7 theming system with dynamic colors from backend
+- Razorpay payment integration
+- Zoom live sessions integration
+- EditorJS rich text editor for lessons
+- Video player with YouTube/Vimeo support
+- Full course learning interface with progress tracking
+- Responsive design for all screen sizes
+- Form validation and error handling
+- TanStack Query for server state management
+
+**Frontend consolidation complete:** Migrated from 4 separate Vite React applications to single Next.js 16 application with 37 routes, unified services, and shared theming—reducing maintenance complexity and improving consistency.
+
+```

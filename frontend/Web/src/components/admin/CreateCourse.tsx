@@ -44,7 +44,7 @@ import SettingsSection from './courses/SettingsSection';
 import StudentsSection from './courses/StudentsSection';
 import CurriculumSection from './courses/CurriculumSection';
 const VideoPlayer = dynamic(() => import('@/components/VideoPlayer'), { ssr: false });
-import { createCourse, updateCourse, getCourse, uploadCourseFile } from '@/services/courseService';
+import { createCourse, updateCourse, getCourse, uploadCourseThumbnail, uploadCourseIntroVideo } from '@/services/courseService';
 import { getCategories, CourseCategory } from '@/services/categories';
 import { STATIC_ASSETS_BASE_URL } from '@/services/apiClient';
 
@@ -254,14 +254,13 @@ const CreateCourse: React.FC<CreateCourseProps> = ({ editCourseId }) => {
         }
     };
 
-    const buildCourseData = (status: string): Record<string, unknown> => {
+    const buildCourseData = (status?: string): Record<string, unknown> => {
         const data: Record<string, unknown> = {
             title,
             short_description: shortDescription,
             description: description || 'No description provided',
             category,
             level,
-            status,
             outcomes: outcomes.map(o => o.name),
             prerequisites: prerequisites.map(p => p.name),
             price: isFree ? 0 : parseFloat(price) || 0,
@@ -275,6 +274,9 @@ const CreateCourse: React.FC<CreateCourseProps> = ({ editCourseId }) => {
             meta_title: metaTitle,
             meta_description: metaDescription,
         };
+        if (status !== undefined) {
+            data.status = status;
+        }
         if (videoSourceType === 'url' && introVideo) {
             data.intro_video = introVideo;
         }
@@ -285,13 +287,34 @@ const CreateCourse: React.FC<CreateCourseProps> = ({ editCourseId }) => {
     };
 
     const uploadFiles = async (courseId: number) => {
+        if (thumbnailFile) {
+            setUploadingThumbnail(true);
+            setThumbnailUploadProgress(0);
+            try {
+                const thumbnailFormData = new FormData();
+                thumbnailFormData.append('thumbnail', thumbnailFile);
+                const thumbnailResponse = await uploadCourseThumbnail(courseId, thumbnailFormData, setThumbnailUploadProgress);
+                const uploadedPath = thumbnailResponse?.data?.path;
+                if (uploadedPath) {
+                    setThumbnail(`${STATIC_ASSETS_BASE_URL}/${uploadedPath}`);
+                }
+                setThumbnailFile(null);
+                setThumbnailUploadProgress(100);
+            } catch (error) {
+                console.error('Failed to upload thumbnail:', error);
+                showSnackbar('Failed to upload thumbnail', 'error');
+            } finally {
+                setUploadingThumbnail(false);
+            }
+        }
+
         if (videoSourceType === 'upload' && introVideoFile) {
             setUploadingVideo(true);
             setVideoUploadProgress(0);
             try {
                 const videoFormData = new FormData();
                 videoFormData.append('intro_video', introVideoFile);
-                await uploadCourseFile(courseId, videoFormData);
+                await uploadCourseIntroVideo(courseId, videoFormData, setVideoUploadProgress);
                 setIntroVideoFile(null);
                 setVideoUploadProgress(100);
             } catch (error) {
@@ -306,7 +329,7 @@ const CreateCourse: React.FC<CreateCourseProps> = ({ editCourseId }) => {
     const handleSaveDraft = async () => {
         setSaving(true);
         try {
-            const data = buildCourseData(visibility);
+            const data = buildCourseData(courseId ? undefined : 'draft');
             let savedCourse;
 
             if (courseId) {
@@ -323,7 +346,7 @@ const CreateCourse: React.FC<CreateCourseProps> = ({ editCourseId }) => {
                 setCourseId(id);
             }
 
-            showSnackbar(isEditMode ? 'Course updated successfully!' : 'Course saved as draft!', 'success');
+            showSnackbar(isEditMode ? 'Course changes saved successfully!' : 'Course saved as draft!', 'success');
         } catch (error: unknown) {
             const err = error as { response?: { data?: { message?: string } }; message?: string };
             console.error('Failed to save draft:', error);

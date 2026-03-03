@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import User, { UserRole } from '../../models/User';
-import { generateToken, generateRefreshToken } from '../../utils/jwt';
+import { generateToken, generateRefreshToken, verifyRefreshToken } from '../../utils/jwt';
 
 export const register = async (req: Request, res: Response): Promise<void> => {
     try {
@@ -177,6 +177,50 @@ export const getMe = async (req: any, res: Response): Promise<void> => {
         res.status(500).json({
             status: 'error',
             message: 'Failed to fetch user data',
+        });
+    }
+};
+
+export const refresh = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const refreshToken = req.body?.refreshToken;
+
+        if (!refreshToken) {
+            res.status(400).json({
+                status: 'error',
+                message: 'Refresh token is required',
+            });
+            return;
+        }
+
+        const decoded = verifyRefreshToken(refreshToken);
+        const user = await User.findByPk(decoded.userId);
+
+        if (!user || !user.is_active) {
+            res.status(401).json({
+                status: 'error',
+                message: 'Invalid refresh token',
+            });
+            return;
+        }
+
+        const newAccessToken = generateToken(user);
+        const newRefreshToken = generateRefreshToken(user);
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Token refreshed successfully',
+            data: {
+                token: newAccessToken,
+                refreshToken: newRefreshToken,
+                user: user.toJSON(),
+            },
+        });
+    } catch (error: any) {
+        console.error('Refresh token error:', error);
+        res.status(401).json({
+            status: 'error',
+            message: 'Invalid or expired refresh token',
         });
     }
 };

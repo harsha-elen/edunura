@@ -9,9 +9,9 @@ import SystemSetting from '../../models/SystemSetting';
 
 export const createOrder = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const { courseId } = req.params;
+        const courseId = req.params.courseId ?? req.body?.courseId;
         const userId = req.userId;
-        const courseIdNum = parseInt(courseId);
+        const courseIdNum = parseInt(String(courseId));
 
         if (!userId) {
             res.status(401).json({ status: 'error', message: 'Unauthorized' });
@@ -54,7 +54,8 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
             return;
         }
 
-        const amount = course.discounted_price ?? course.price;
+        // Use discounted price if it exists and is > 0, otherwise use regular price
+        const amount = (course.discounted_price && course.discounted_price > 0) ? course.discounted_price : course.price;
         if (!amount || amount <= 0) {
             res.status(400).json({ status: 'error', message: 'This course is free or invalid price' });
             return;
@@ -117,7 +118,9 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<void
 
 export const verifyPayment = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const { order_id, payment_id, signature } = req.body;
+        const order_id = req.body?.order_id || req.body?.razorpay_order_id;
+        const payment_id = req.body?.payment_id || req.body?.razorpay_payment_id;
+        const signature = req.body?.signature || req.body?.razorpay_signature;
         const userId = req.userId;
 
         if (!userId) {

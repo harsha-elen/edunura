@@ -26,7 +26,7 @@ interface AuthContextType {
     token: string | null;
     isAuthenticated: boolean;
     isLoading: boolean;
-    login: (token: string, user: User) => void;
+    login: (token: string, user: User, refreshToken?: string, redirectTo?: string) => void;
     logout: () => void;
     updateUser: (user: User) => void;
 }
@@ -86,15 +86,21 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setIsLoading(false);
     }, []);
 
-    const login = useCallback((newToken: string, newUser: User) => {
+    const login = useCallback((newToken: string, newUser: User, newRefreshToken?: string, redirectTo?: string) => {
         setToken(newToken);
         setUser(newUser);
         localStorage.setItem('token', newToken);
         localStorage.setItem('user', JSON.stringify(newUser));
+        if (newRefreshToken) {
+            localStorage.setItem('refreshToken', newRefreshToken);
+        }
 
         // Redirect to the appropriate dashboard
         const dashboardPath = getDashboardPath(newUser.role);
-        router.push(dashboardPath);
+        const safeRedirect = redirectTo && redirectTo.startsWith('/') && !redirectTo.startsWith('//')
+            ? redirectTo
+            : dashboardPath;
+        router.push(safeRedirect);
     }, [router]);
 
     const logout = useCallback(() => {
@@ -102,6 +108,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(null);
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        localStorage.removeItem('refreshToken');
         router.push('/login');
     }, [router]);
 

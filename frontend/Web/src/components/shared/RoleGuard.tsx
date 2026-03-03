@@ -3,7 +3,7 @@
 import React from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
-import { Box, CircularProgress, Typography } from '@mui/material';
+import { Box, CircularProgress } from '@mui/material';
 
 interface RoleGuardProps {
     children: React.ReactNode;
@@ -23,8 +23,15 @@ interface RoleGuardProps {
 export default function RoleGuard({ children, allowedRoles }: RoleGuardProps) {
     const { user, isAuthenticated, isLoading } = useAuth();
     const router = useRouter();
+    const pathname = usePathname();
+    const nextPath = pathname;
 
     React.useEffect(() => {
+        if (!isLoading && !isAuthenticated) {
+            router.replace(`/login?next=${encodeURIComponent(nextPath)}`);
+            return;
+        }
+
         if (!isLoading && isAuthenticated && user) {
             if (!allowedRoles.includes(user.role)) {
                 // User is authenticated but wrong role - redirect to correct dashboard
@@ -37,7 +44,7 @@ export default function RoleGuard({ children, allowedRoles }: RoleGuardProps) {
                 router.push(roleRedirects[user.role] || '/login');
             }
         }
-    }, [isLoading, isAuthenticated, user, allowedRoles, router]);
+    }, [isLoading, isAuthenticated, user, allowedRoles, router, nextPath]);
 
     if (isLoading) {
         return (

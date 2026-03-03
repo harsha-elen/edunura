@@ -256,7 +256,7 @@ const TextMediaLessonUpload: React.FC<TextMediaLessonUploadProps> = ({
         return () => {
             isMounted = false;
             if (editorRef.current?.destroy) {
-                try { editorRef.current.destroy(); } catch { /* ignore */ }
+                void Promise.resolve(editorRef.current.destroy()).catch(() => { /* ignore */ });
                 editorRef.current = null;
             }
         };

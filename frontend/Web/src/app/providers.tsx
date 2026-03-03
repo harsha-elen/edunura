@@ -21,6 +21,23 @@ interface ProvidersProps {
 }
 
 export default function Providers({ children }: ProvidersProps) {
+    React.useEffect(() => {
+        const onUnhandledRejection = (event: PromiseRejectionEvent) => {
+            const reason = typeof event.reason === 'string'
+                ? event.reason
+                : event.reason?.message;
+
+            if (reason === 'provider destroyed') {
+                event.preventDefault();
+            }
+        };
+
+        window.addEventListener('unhandledrejection', onUnhandledRejection);
+        return () => {
+            window.removeEventListener('unhandledrejection', onUnhandledRejection);
+        };
+    }, []);
+
     return (
         <AppRouterCacheProvider options={{ enableCssLayer: true }}>
             <QueryClientProvider client={queryClient}>

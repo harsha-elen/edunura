@@ -14,6 +14,7 @@ router.post('/webhook', handleWebhook);
 
 router.use(authenticate);
 
+router.post('/orders', createOrder);
 router.post('/create-order/:courseId', createOrder);
 router.post('/verify', verifyPayment);
 router.get('/history', getPaymentHistory);

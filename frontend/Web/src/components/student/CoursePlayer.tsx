@@ -345,6 +345,7 @@ export default function CoursePlayer() {
     const nextLesson = getNextLesson();
     const prevLesson = getPrevLesson();
     const isCurrentCompleted = currentLesson ? isLessonCompleted(currentLesson.id) : false;
+    const isReadingLesson = currentLesson?.content_type === 'text' || currentLesson?.content_type === 'document';
 
     // ─── Render ───────────────────────────────────────────────
 
@@ -406,12 +407,12 @@ export default function CoursePlayer() {
             <Box sx={{ display: 'flex', flexDirection: { xs: 'column', lg: 'row' }, flexGrow: 1 }}>
                 {/* ─── Left Column: Video & Content ─── */}
                 <Box sx={{ width: { xs: '100%', lg: '75%' }, display: 'flex', flexDirection: 'column', bgcolor: theme.palette.background.paper, minWidth: 0 }}>
-                    {/* Video Player / Zoom Meeting / No Video */}
+                    {/* Video Player / Zoom Meeting / Reading Mode / No Video */}
                     <Box sx={{
                         width: '100%',
-                        aspectRatio: currentLesson?.content_type === 'live' ? 'auto' : '16/9',
-                        minHeight: currentLesson?.content_type === 'live' ? 500 : 0,
-                        bgcolor: '#000',
+                        aspectRatio: currentLesson?.content_type === 'live' ? 'auto' : isReadingLesson ? 'auto' : '16/9',
+                        minHeight: currentLesson?.content_type === 'live' ? 500 : isReadingLesson ? 180 : 0,
+                        bgcolor: isReadingLesson ? theme.palette.background.default : '#000',
                         position: 'relative',
                         overflow: 'hidden',
                     }}>
@@ -472,6 +473,44 @@ export default function CoursePlayer() {
                                 title={currentLesson.title}
                                 autoPlay={false}
                             />
+                        ) : isReadingLesson ? (
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    gap: 2,
+                                    px: { xs: 3, md: 4 },
+                                    py: 3,
+                                    borderBottom: `1px solid ${theme.palette.divider}`,
+                                    bgcolor: theme.palette.background.paper,
+                                }}
+                            >
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                    <Box
+                                        sx={{
+                                            width: 44,
+                                            height: 44,
+                                            borderRadius: 2,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            bgcolor: alpha(theme.palette.info.main, 0.12),
+                                            color: theme.palette.info.main,
+                                        }}
+                                    >
+                                        <DocumentIcon />
+                                    </Box>
+                                    <Box>
+                                        <Typography variant="subtitle1" sx={{ fontWeight: 700, color: theme.palette.text.primary }}>
+                                            Reading Lesson
+                                        </Typography>
+                                        <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+                                            Focus mode enabled for text content.
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                            </Box>
                         ) : (
                             <Box sx={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: '#1e293b' }}>
                                 <Box sx={{ textAlign: 'center', color: '#fff' }}>

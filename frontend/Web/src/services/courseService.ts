@@ -68,8 +68,8 @@ export const getCourses = async (params?: Record<string, unknown>) => {
     return response.data;
 };
 
-export const getCourse = async (id: string | number) => {
-    const response = await apiClient.get(`/courses/${id}`);
+export const getCourse = async (id: string | number, params?: Record<string, unknown>) => {
+    const response = await apiClient.get(`/courses/${id}`, { params });
     return response.data;
 };
 
@@ -254,9 +254,38 @@ export const getThumbnailUrl = (thumbnail: string | null | undefined): string | 
 
 // ─── Upload ───────────────────────────────────────────────────
 
-export const uploadCourseFile = async (courseId: string | number, formData: FormData) => {
-    const response = await apiClient.post(`/upload`, formData, {
-        params: { courseId },
+export const uploadCourseThumbnail = async (
+    courseId: string | number,
+    formData: FormData,
+    onProgress?: (progress: number) => void
+) => {
+    const response = await apiClient.patch(`/courses/${courseId}/thumbnail`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (progressEvent) => {
+            if (onProgress && progressEvent.total) {
+                onProgress(Math.round((progressEvent.loaded * 100) / progressEvent.total));
+            }
+        },
     });
     return response.data;
+};
+
+export const uploadCourseIntroVideo = async (
+    courseId: string | number,
+    formData: FormData,
+    onProgress?: (progress: number) => void
+) => {
+    const response = await apiClient.patch(`/courses/${courseId}/intro-video`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (progressEvent) => {
+            if (onProgress && progressEvent.total) {
+                onProgress(Math.round((progressEvent.loaded * 100) / progressEvent.total));
+            }
+        },
+    });
+    return response.data;
+};
+
+export const uploadCourseFile = async (courseId: string | number, formData: FormData) => {
+    return uploadCourseIntroVideo(courseId, formData);
 };

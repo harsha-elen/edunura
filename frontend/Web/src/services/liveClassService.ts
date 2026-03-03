@@ -1,12 +1,15 @@
 import apiClient from './apiClient';
 
 export const getLiveSessions = async (params?: Record<string, unknown>) => {
-    const response = await apiClient.get('/live-classes', { params });
+    const courseId = params?.courseId;
+    const response = courseId
+        ? await apiClient.get(`/live-classes/course/${courseId}`, { params })
+        : await apiClient.get('/live-classes/all', { params });
     return response.data;
 };
 
 export const getLiveSession = async (id: string | number) => {
-    const response = await apiClient.get(`/live-classes/${id}`);
+    const response = await apiClient.get(`/live-classes/course/${id}`);
     return response.data;
 };
 
@@ -16,7 +19,7 @@ export const createLiveSession = async (data: Record<string, unknown>) => {
 };
 
 export const updateLiveSession = async (id: string | number, data: Record<string, unknown>) => {
-    const response = await apiClient.patch(`/live-classes/${id}`, data);
+    const response = await apiClient.put(`/live-classes/${id}`, data);
     return response.data;
 };
 

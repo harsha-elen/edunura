@@ -27,7 +27,7 @@ import {
 } from '@mui/icons-material';
 import { login as loginApi } from '@/services/authService';
 import { STATIC_ASSETS_BASE_URL, API_BASE_URL } from '@/services/apiClient';
-import { useAuth, getDashboardPath } from '@/context/AuthContext';
+import { useAuth } from '@/context/AuthContext';
 
 const Login: React.FC = () => {
     const router = useRouter();
@@ -40,6 +40,15 @@ const Login: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [orgLogo, setOrgLogo] = useState<string | null>(typeof window !== 'undefined' ? localStorage.getItem('org_logo') : null);
     const [siteName, setSiteName] = useState(typeof window !== 'undefined' ? localStorage.getItem('site_name') || 'LMS Enterprise' : 'LMS Enterprise');
+    const [safeNext, setSafeNext] = useState<string | undefined>(undefined);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const nextParam = new URLSearchParams(window.location.search).get('next') || '';
+        if (nextParam.startsWith('/') && !nextParam.startsWith('//')) {
+            setSafeNext(nextParam);
+        }
+    }, []);
 
     useEffect(() => {
         fetch(`${API_BASE_URL}/settings`)
@@ -68,7 +77,7 @@ const Login: React.FC = () => {
             const response = await loginApi({ email, password });
 
             if (response.status === 'success' && response.data) {
-                login(response.data.token, response.data.user);
+                login(response.data.token, response.data.user, response.data.refreshToken, safeNext);
             } else {
                 setError('Login failed. Please check your credentials.');
                 setLoading(false);
@@ -231,6 +240,17 @@ const Login: React.FC = () => {
                         >
                             {loading ? <CircularProgress size={24} color="inherit" /> : 'Sign In'}
                         </Button>
+
+                        <Typography variant="body2" sx={{ textAlign: 'center', color: 'text.secondary' }}>
+                            New student?{' '}
+                            <Link
+                                href={safeNext ? `/register?next=${encodeURIComponent(safeNext)}` : '/register'}
+                                underline="hover"
+                                sx={{ color: theme.palette.primary.main, fontWeight: 600 }}
+                            >
+                                Create account
+                            </Link>
+                        </Typography>
                     </Box>
 
                     {/* Footer Section of Card */}

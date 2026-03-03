@@ -24,9 +24,12 @@ interface ThemeProviderProps {
     children: ReactNode;
 }
 
+// Default brand color matching --color-primary in globals.css
+const DEFAULT_PRIMARY_COLOR = '#F15A24';
+
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     const [primaryColor, setPrimaryColor] = useState<string>(
-        (typeof window !== 'undefined' && localStorage.getItem('branding_primary_color')) || '#2b8cee'
+        (typeof window !== 'undefined' && localStorage.getItem('branding_primary_color')) || DEFAULT_PRIMARY_COLOR
     );
 
     useEffect(() => {

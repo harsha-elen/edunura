@@ -1,3 +1,11 @@
 2026-02-28T07:31:42.454Z - [deleteFile] Input relativePath: uploads/courses/id_27/assets/video-1772263846704-928427945.mp4
 2026-02-28T07:31:42.455Z - [deleteFile] Resolved absolute filePath: C:\Users\harsh\OneDrive\Desktop\lms-dev\backend\uploads\courses\id_27\assets\video-1772263846704-928427945.mp4
 2026-02-28T07:31:42.459Z - [deleteFile] ✅ Success: Deleted C:\Users\harsh\OneDrive\Desktop\lms-dev\backend\uploads\courses\id_27\assets\video-1772263846704-928427945.mp4
+2026-03-03T02:29:38.798Z - [deleteFile] Input relativePath: uploads/courses/id_27/thumbnail/thumbnail-1771959890928-681165474.jpg
+2026-03-03T02:29:38.802Z - [deleteFile] Resolved absolute filePath: C:\Users\harsh\OneDrive\Desktop\edunura\backend\uploads\courses\id_27\thumbnail\thumbnail-1771959890928-681165474.jpg
+2026-03-03T02:29:38.805Z - [deleteFile] Checking cwd path: C:\Users\harsh\OneDrive\Desktop\edunura\backend\uploads\courses\id_27\thumbnail\thumbnail-1771959890928-681165474.jpg
+2026-03-03T02:29:38.806Z - [deleteFile] ⚠️ Failed: File not found at C:\Users\harsh\OneDrive\Desktop\edunura\backend\uploads\courses\id_27\thumbnail\thumbnail-1771959890928-681165474.jpg OR C:\Users\harsh\OneDrive\Desktop\edunura\backend\uploads\courses\id_27\thumbnail\thumbnail-1771959890928-681165474.jpg
+2026-03-03T02:29:52.663Z - [deleteFile] Input relativePath: uploads/courses/id_26/thumbnail/thumbnail-1771596081404-951208655.jpg
+2026-03-03T02:29:52.664Z - [deleteFile] Resolved absolute filePath: C:\Users\harsh\OneDrive\Desktop\edunura\backend\uploads\courses\id_26\thumbnail\thumbnail-1771596081404-951208655.jpg
+2026-03-03T02:29:52.666Z - [deleteFile] Checking cwd path: C:\Users\harsh\OneDrive\Desktop\edunura\backend\uploads\courses\id_26\thumbnail\thumbnail-1771596081404-951208655.jpg
+2026-03-03T02:29:52.667Z - [deleteFile] ⚠️ Failed: File not found at C:\Users\harsh\OneDrive\Desktop\edunura\backend\uploads\courses\id_26\thumbnail\thumbnail-1771596081404-951208655.jpg OR C:\Users\harsh\OneDrive\Desktop\edunura\backend\uploads\courses\id_26\thumbnail\thumbnail-1771596081404-951208655.jpg

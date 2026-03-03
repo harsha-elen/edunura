@@ -40,7 +40,8 @@ export const register = async (data: RegisterData): Promise<AuthResponse> => {
 };
 
 export const refreshToken = async (): Promise<AuthResponse> => {
-    const response = await apiClient.post('/auth/refresh');
+    const storedRefreshToken = typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
+    const response = await apiClient.post('/auth/refresh', { refreshToken: storedRefreshToken });
     return response.data;
 };
 
@@ -53,5 +54,6 @@ export const logout = () => {
     if (typeof window !== 'undefined') {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        localStorage.removeItem('refreshToken');
     }
 };

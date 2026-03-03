@@ -42,7 +42,7 @@ export const getEnrollments = async (params?: Record<string, unknown>) => {
 };
 
 export const enrollInCourse = async (courseId: string | number) => {
-    const response = await apiClient.post('/enrollments', { courseId });
+    const response = await apiClient.post(`/courses/${courseId}/enroll`);
     return response.data;
 };
 

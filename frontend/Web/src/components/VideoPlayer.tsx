@@ -51,7 +51,7 @@ const VideoPlayer = ({
     const accentColor =
         primaryColor ||
         (typeof window !== 'undefined' ? localStorage.getItem('branding_primary_color') : null) ||
-        '#2b8cee';
+        '#F15A24';
 
     const normalizedSrc = useMemo(() => normalizeVideoSrc(src), [src]);
 
@@ -67,6 +67,7 @@ const VideoPlayer = ({
             } as React.CSSProperties}
         >
             <MediaPlayer
+                key={normalizedSrc}
                 title={title}
                 src={normalizedSrc}
                 autoPlay={autoPlay}

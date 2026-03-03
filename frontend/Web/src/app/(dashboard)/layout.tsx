@@ -1,10 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Box, CircularProgress } from '@mui/material';
 import { useAuth } from '@/context/AuthContext';
-import { useRouter } from 'next/navigation';
-import { getDashboardPath } from '@/context/AuthContext';
+import { useRouter, usePathname } from 'next/navigation';
 
 /**
  * (dashboard) layout — wraps all authenticated portal routes.
@@ -18,25 +16,37 @@ export default function DashboardGroupLayout({
 }) {
     const { isAuthenticated, isLoading, user } = useAuth();
     const router = useRouter();
+    const pathname = usePathname();
+    const nextPath = pathname;
 
     React.useEffect(() => {
         if (!isLoading && !isAuthenticated) {
-            router.push('/login');
+            router.replace(`/login?next=${encodeURIComponent(nextPath)}`);
         }
-    }, [isLoading, isAuthenticated, router]);
+    }, [isLoading, isAuthenticated, router, nextPath]);
 
     if (isLoading) {
         return (
-            <Box
-                sx={{
+            <div
+                style={{
                     display: 'flex',
                     justifyContent: 'center',
                     alignItems: 'center',
                     height: '100vh',
                 }}
             >
-                <CircularProgress />
-            </Box>
+                <div
+                    style={{
+                        width: 36,
+                        height: 36,
+                        borderRadius: '50%',
+                        border: '3px solid rgba(0, 0, 0, 0.15)',
+                        borderTopColor: 'rgba(0, 0, 0, 0.65)',
+                        animation: 'edunura-spin 0.8s linear infinite',
+                    }}
+                />
+                <style>{`@keyframes edunura-spin { to { transform: rotate(360deg); } }`}</style>
+            </div>
         );
     }
 

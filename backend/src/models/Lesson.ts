@@ -19,6 +19,9 @@ interface LessonAttributes {
     file_path?: string; // Path to local asset
     zoom_meeting_id?: string;
     zoom_join_url?: string;
+    content_platform?: 'zoom' | 'jitsi'; // Platform for live content
+    jitsi_room_name?: string;
+    jitsi_join_url?: string;
     order: number;
     duration?: number; // In minutes
     is_free_preview: boolean;
@@ -28,7 +31,7 @@ interface LessonAttributes {
     updated_at?: Date;
 }
 
-interface LessonCreationAttributes extends Optional<LessonAttributes, 'id' | 'is_published' | 'order' | 'is_free_preview' | 'content_body' | 'file_path' | 'zoom_meeting_id' | 'zoom_join_url' | 'duration'> { }
+interface LessonCreationAttributes extends Optional<LessonAttributes, 'id' | 'is_published' | 'order' | 'is_free_preview' | 'content_body' | 'file_path' | 'zoom_meeting_id' | 'zoom_join_url' | 'content_platform' | 'jitsi_room_name' | 'jitsi_join_url' | 'duration'> { }
 
 class Lesson extends Model<LessonAttributes, LessonCreationAttributes> implements LessonAttributes {
     public id!: number;
@@ -39,6 +42,9 @@ class Lesson extends Model<LessonAttributes, LessonCreationAttributes> implement
     public file_path?: string;
     public zoom_meeting_id?: string;
     public zoom_join_url?: string;
+    public content_platform?: 'zoom' | 'jitsi';
+    public jitsi_room_name?: string;
+    public jitsi_join_url?: string;
     public order!: number;
     public duration?: number;
     public is_free_preview!: boolean;
@@ -86,6 +92,19 @@ Lesson.init(
             allowNull: true,
         },
         zoom_join_url: {
+            type: DataTypes.STRING(1000),
+            allowNull: true,
+        },
+        content_platform: {
+            type: DataTypes.ENUM('zoom', 'jitsi'),
+            defaultValue: 'zoom',
+            allowNull: true,
+        },
+        jitsi_room_name: {
+            type: DataTypes.STRING(255),
+            allowNull: true,
+        },
+        jitsi_join_url: {
             type: DataTypes.STRING(1000),
             allowNull: true,
         },

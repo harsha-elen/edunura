@@ -65,6 +65,9 @@ interface Lesson {
     start_time?: string;
     zoom_meeting_id?: string;
     zoom_join_url?: string;
+    content_platform?: 'zoom' | 'jitsi';
+    jitsi_room_name?: string;
+    jitsi_join_url?: string;
     order?: number;
 }
 
@@ -168,6 +171,9 @@ const CurriculumSection: React.FC<CurriculumSectionProps> = ({ courseId }) => {
                             start_time: lesson.start_time,
                             zoom_meeting_id: lesson.zoom_meeting_id,
                             zoom_join_url: lesson.zoom_join_url,
+                            content_platform: lesson.content_platform,
+                            jitsi_room_name: lesson.jitsi_room_name,
+                            jitsi_join_url: lesson.jitsi_join_url,
                             order: lesson.order,
                         }));
                         return {
@@ -542,7 +548,7 @@ const CurriculumSection: React.FC<CurriculumSectionProps> = ({ courseId }) => {
                                                                 </Box>
                                                             </Box>
                                                             <Box className="lesson-actions" sx={{ display: 'flex', alignItems: 'center', gap: 0.5, opacity: 0, transition: 'opacity 0.2s', pointerEvents: 'auto' }}>
-                                                                {lesson.type === 'live' && lesson.zoom_join_url && (
+                                                                {lesson.type === 'live' && (lesson.zoom_join_url || lesson.jitsi_join_url) && (
                                                                     <Button
                                                                         variant="outlined"
                                                                         size="small"
@@ -551,7 +557,11 @@ const CurriculumSection: React.FC<CurriculumSectionProps> = ({ courseId }) => {
                                                                         sx={{ mr: 1, borderColor: 'rgba(220,38,38,0.5)', color: '#dc2626', '&:hover': { borderColor: '#dc2626', bgcolor: 'rgba(220,38,38,0.05)' } }}
                                                                         onClick={(e) => {
                                                                             e.stopPropagation();
-                                                                            window.open(lesson.zoom_meeting_id ? `/meeting/${lesson.zoom_meeting_id}` : lesson.zoom_join_url, '_blank');
+                                                                            if (lesson.content_platform === 'jitsi' && lesson.jitsi_room_name) {
+                                                                                window.open(`/meeting/${lesson.jitsi_room_name}`, '_blank');
+                                                                            } else {
+                                                                                window.open(lesson.zoom_meeting_id ? `/meeting/${lesson.zoom_meeting_id}` : lesson.zoom_join_url, '_blank');
+                                                                            }
                                                                         }}
                                                                     >
                                                                         Start

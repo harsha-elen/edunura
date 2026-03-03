@@ -10,16 +10,19 @@ interface LiveSessionAttributes {
     description?: string;
     start_time: Date;
     duration: number; // in minutes
-    meeting_id: string; // Zoom Meeting ID
-    start_url: string; // URL for host to start the meeting
+    meeting_id: string; // Zoom Meeting ID or Jitsi Room Name
+    start_url: string; // URL for host to start the meeting (Zoom only)
     join_url: string; // URL for participants to join
-    password?: string; // Meeting password
+    password?: string; // Meeting password (Zoom only)
+    meeting_type?: 'zoom' | 'jitsi'; // Platform type
+    jitsi_room_name?: string; // Jitsi room identifier
+    jitsi_config?: Record<string, any> | null; // Jitsi configuration
     is_active: boolean; // True if scheduled/running, false if cancelled/completed
     created_at?: Date;
     updated_at?: Date;
 }
 
-interface LiveSessionCreationAttributes extends Optional<LiveSessionAttributes, 'id' | 'section_id' | 'description' | 'password' | 'is_active'> { }
+interface LiveSessionCreationAttributes extends Optional<LiveSessionAttributes, 'id' | 'section_id' | 'description' | 'password' | 'is_active' | 'meeting_type' | 'jitsi_room_name' | 'jitsi_config'> { }
 
 class LiveSession extends Model<LiveSessionAttributes, LiveSessionCreationAttributes> implements LiveSessionAttributes {
     public id!: number;
@@ -33,6 +36,9 @@ class LiveSession extends Model<LiveSessionAttributes, LiveSessionCreationAttrib
     public start_url!: string;
     public join_url!: string;
     public password?: string;
+    public meeting_type?: 'zoom' | 'jitsi';
+    public jitsi_room_name?: string;
+    public jitsi_config?: Record<string, any> | null;
     public is_active!: boolean;
 
     public readonly created_at!: Date;
@@ -91,6 +97,19 @@ LiveSession.init(
             type: DataTypes.STRING,
             allowNull: true,
         },
+        meeting_type: {
+            type: DataTypes.ENUM('zoom', 'jitsi'),
+            defaultValue: 'zoom',
+        },
+        jitsi_room_name: {
+            type: DataTypes.STRING(255),
+            allowNull: true,
+            unique: true,
+        },
+        jitsi_config: {
+            type: DataTypes.JSON,
+            allowNull: true,
+        },
         is_active: {
             type: DataTypes.BOOLEAN,
             defaultValue: true,
@@ -105,6 +124,12 @@ LiveSession.init(
             },
             {
                 fields: ['start_time'],
+            },
+            {
+                fields: ['meeting_type'],
+            },
+            {
+                fields: ['jitsi_room_name'],
             },
         ],
     }

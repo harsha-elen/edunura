@@ -30,7 +30,7 @@ import {
 } from '@mui/icons-material';
 import { useTheme, alpha } from '@mui/material/styles';
 import apiClient from '@/services/apiClient';
-import { getZoomAccount } from '@/services/settings';
+import { getZoomAccount, getMeetingPlatform } from '@/services/settings';
 import { uploadLessonResource, deleteLessonResource } from '@/services/courseService';
 import type { LessonResource } from '@/services/courseService';
 import 'react-quill-new/dist/quill.snow.css';
@@ -103,6 +103,7 @@ const LiveClassLessonUpload: React.FC<LiveClassLessonUploadProps> = ({
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
     const [zoomAccountInfo, setZoomAccountInfo] = useState<any>(null);
     const [refreshingZoom, setRefreshingZoom] = useState(false);
+    const [meetingPlatform, setMeetingPlatform] = useState<'zoom' | 'jitsi'>('zoom');
     const isEditMode = !!initialData;
 
     useEffect(() => {
@@ -128,17 +129,21 @@ const LiveClassLessonUpload: React.FC<LiveClassLessonUploadProps> = ({
     }, [initialData]);
 
     useEffect(() => {
-        const fetchZoomInfo = async () => {
+        const fetchPlatformAndInfo = async () => {
             try {
-                const response = await getZoomAccount();
-                if (response.status === 'success' && response.data) {
-                    setZoomAccountInfo(response.data);
+                const platform = await getMeetingPlatform();
+                setMeetingPlatform(platform);
+                if (platform === 'zoom') {
+                    const response = await getZoomAccount();
+                    if (response.status === 'success' && response.data) {
+                        setZoomAccountInfo(response.data);
+                    }
                 }
             } catch (err) {
-                console.error('Failed to fetch Zoom account info:', err);
+                console.error('Failed to fetch meeting platform info:', err);
             }
         };
-        fetchZoomInfo();
+        fetchPlatformAndInfo();
     }, [initialData]);
 
     const handleRefreshZoomInfo = async () => {
@@ -155,7 +160,7 @@ const LiveClassLessonUpload: React.FC<LiveClassLessonUploadProps> = ({
         }
     };
 
-    const isFreeAccount = zoomAccountInfo === null || zoomAccountInfo?.type === 1;
+    const isFreeAccount = meetingPlatform === 'zoom' && (zoomAccountInfo === null || zoomAccountInfo?.type === 1);
     const maxDurationForFree = 40;
 
     const handleCreate = async () => {
@@ -280,10 +285,10 @@ const LiveClassLessonUpload: React.FC<LiveClassLessonUploadProps> = ({
                     </Box>
                     <Box>
                         <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.125rem' }}>
-                            {isEditMode ? 'Edit Zoom Live Class' : 'Schedule Zoom Live Class'}
+                            {isEditMode ? `Edit ${meetingPlatform === 'jitsi' ? 'Jitsi' : 'Zoom'} Live Class` : `Schedule ${meetingPlatform === 'jitsi' ? 'Jitsi' : 'Zoom'} Live Class`}
                         </Typography>
                         <Typography variant="body2" sx={{ color: '#64748b', fontSize: '0.875rem' }}>
-                            {isEditMode ? 'Update your live session configuration' : 'Configure your upcoming live session and materials'}
+                            {isEditMode ? `Update your ${meetingPlatform === 'jitsi' ? 'Jitsi' : 'Zoom'} session configuration` : `Set up your ${meetingPlatform === 'jitsi' ? 'Jitsi' : 'Zoom'} session and materials`}
                         </Typography>
                     </Box>
                 </Box>

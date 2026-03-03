@@ -37,7 +37,9 @@ app.use(cors({
         process.env.STUDENT_URL || '',
         process.env.ADMIN_URL || '',
         process.env.TEACHER_URL || '',
-        process.env.LANDING_URL || ''
+        process.env.LANDING_URL || '',
+        // Allow Jitsi web container to fetch /api/live-classes/branding for dynamic branding
+        process.env.JITSI_DOMAIN ? `https://${process.env.JITSI_DOMAIN}` : '',
     ].filter(Boolean),
     credentials: true,
 }));

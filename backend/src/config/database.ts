@@ -2,6 +2,7 @@ import { Sequelize, QueryTypes } from 'sequelize';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
+import MigrationRunner from '../utils/migrationRunner';
 
 dotenv.config();
 
@@ -85,6 +86,11 @@ export const connectDatabase = async (): Promise<void> => {
             }
             console.log('✅ Database schema initialized successfully.');
         }
+
+        // Run pending database migrations
+        console.log('🔄 Checking for pending migrations...');
+        const migrationRunner = new MigrationRunner(sequelize);
+        await migrationRunner.runPendingMigrations();
 
         // Create only the new lesson_progress table if it doesn't exist
         // Don't sync existing tables to avoid index conflicts

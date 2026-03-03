@@ -38,6 +38,9 @@ export interface Lesson {
     file_path?: string;
     zoom_meeting_id?: string;
     zoom_join_url?: string;
+    content_platform?: 'zoom' | 'jitsi';
+    jitsi_room_name?: string;
+    jitsi_join_url?: string;
     order: number;
     duration?: number;
     is_free_preview: boolean;
@@ -55,6 +58,9 @@ export interface CreateLessonData {
     file_path?: string;
     zoom_meeting_id?: string;
     zoom_join_url?: string;
+    content_platform?: 'zoom' | 'jitsi';
+    jitsi_room_name?: string;
+    jitsi_join_url?: string;
     order?: number;
     duration?: number;
     is_free_preview?: boolean;
@@ -183,6 +189,28 @@ export const deleteLessonResource = async (resourceId: number) => {
 export const getLiveClassSignature = async (meetingId: string) => {
     const response = await apiClient.get(`/live-classes/${meetingId}/join-token`);
     return response.data;
+};
+
+export const getJitsiConfig = async (sessionId: string | number) => {
+    const response = await apiClient.get(`/live-classes/${sessionId}/jitsi-config`);
+    return response.data;
+};
+
+export const getLiveClassStatus = async (sessionId: string | number): Promise<{ isLive: boolean }> => {
+    const response = await apiClient.get(`/live-classes/${sessionId}/status`);
+    return response.data.data;
+};
+
+export const sendHostHeartbeat = async (sessionId: string | number): Promise<void> => {
+    try {
+        await apiClient.post(`/live-classes/${sessionId}/heartbeat`);
+    } catch { /* silently ignore — non-critical */ }
+};
+
+export const endLiveClassSession = async (sessionId: string | number): Promise<void> => {
+    try {
+        await apiClient.post(`/live-classes/${sessionId}/end-session`);
+    } catch { /* best-effort */ }
 };
 
 // ─── Student Progress ─────────────────────────────────────────

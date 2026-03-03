@@ -6,6 +6,7 @@ export enum SettingCategory {
     STORAGE = 'storage',
     EMAIL = 'email',
     ZOOM = 'zoom',
+    JITSI = 'jitsi',
     GENERAL = 'general',
     BRANDING = 'branding',
     ORGANIZATION = 'organization',

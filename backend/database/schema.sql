@@ -118,10 +118,13 @@ CREATE TABLE IF NOT EXISTS `lessons` (
   `section_id` int(10) unsigned NOT NULL,
   `title` varchar(255) NOT NULL,
   `content_type` enum('video','quiz','text','document','live') NOT NULL DEFAULT 'text',
+  `content_platform` enum('zoom','jitsi') DEFAULT 'zoom',
   `content_body` text DEFAULT NULL,
   `file_path` varchar(500) DEFAULT NULL,
   `zoom_meeting_id` varchar(100) DEFAULT NULL,
   `zoom_join_url` varchar(1000) DEFAULT NULL,
+  `jitsi_room_name` varchar(255) DEFAULT NULL,
+  `jitsi_join_url` varchar(1000) DEFAULT NULL,
   `order` int(11) NOT NULL DEFAULT 0,
   `duration` int(11) DEFAULT NULL,
   `is_free_preview` tinyint(1) DEFAULT 0,
@@ -131,6 +134,8 @@ CREATE TABLE IF NOT EXISTS `lessons` (
   `updated_at` datetime NOT NULL,
   PRIMARY KEY (`id`),
   KEY `section_id` (`section_id`),
+  KEY `content_platform` (`content_platform`),
+  KEY `jitsi_room_name` (`jitsi_room_name`),
   CONSTRAINT `lessons_ibfk_1` FOREIGN KEY (`section_id`) REFERENCES `course_sections` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -200,12 +205,17 @@ CREATE TABLE IF NOT EXISTS `live_sessions` (
   `start_url` text NOT NULL,
   `join_url` text NOT NULL,
   `password` varchar(255) DEFAULT NULL,
+  `meeting_type` enum('zoom','jitsi') DEFAULT 'zoom',
+  `jitsi_room_name` varchar(255) UNIQUE DEFAULT NULL,
+  `jitsi_config` json DEFAULT NULL,
   `is_active` tinyint(1) DEFAULT 1,
   `created_at` datetime NOT NULL,
   `updated_at` datetime NOT NULL,
   PRIMARY KEY (`id`),
   KEY `live_sessions_course_id` (`course_id`),
   KEY `live_sessions_start_time` (`start_time`),
+  KEY `meeting_type` (`meeting_type`),
+  KEY `jitsi_room_name` (`jitsi_room_name`),
   CONSTRAINT `live_sessions_course_fk` FOREIGN KEY (`course_id`) REFERENCES `courses` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -236,7 +246,7 @@ CREATE TABLE IF NOT EXISTS `payments` (
 -- Table: system_settings
 CREATE TABLE IF NOT EXISTS `system_settings` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `category` enum('payment','storage','email','zoom','general','branding','organization','localization') NOT NULL,
+  `category` enum('payment','storage','email','zoom','jitsi','general','branding','organization','localization') NOT NULL,
   `key` varchar(100) NOT NULL,
   `value` text NOT NULL,
   `is_encrypted` tinyint(1) DEFAULT 0,

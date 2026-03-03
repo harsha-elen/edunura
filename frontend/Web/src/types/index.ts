@@ -83,6 +83,11 @@ export interface Lesson {
     is_preview?: boolean;
     start_time?: string;
     resources?: LessonResource[];
+    content_platform?: 'zoom' | 'jitsi';
+    jitsi_room_name?: string;
+    jitsi_join_url?: string;
+    zoom_meeting_id?: string;
+    zoom_join_url?: string;
 }
 
 export interface LessonResource {
@@ -146,6 +151,9 @@ export interface LiveSession {
     start_time?: string;
     duration?: number;
     status?: string;
+    meeting_type?: 'zoom' | 'jitsi';
+    jitsi_room_name?: string;
+    jitsi_config?: Record<string, unknown>;
 }
 
 export interface ApiResponse<T = unknown> {

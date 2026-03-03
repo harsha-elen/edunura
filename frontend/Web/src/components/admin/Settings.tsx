@@ -73,10 +73,18 @@ const Settings: React.FC = () => {
         webhookSecret: ''
     });
 
+    const [meetingPlatform, setMeetingPlatform] = useState<'zoom' | 'jitsi'>('zoom');
+
     const [zoomSettings, setZoomSettings] = useState({
         accountId: '',
         clientId: '',
         clientSecret: ''
+    });
+
+    const [jitsiSettings, setJitsiSettings] = useState({
+        domain: 'https://meet.jitsi.org',
+        appId: '',
+        appSecret: ''
     });
 
     const [zoomAccountInfo, setZoomAccountInfo] = useState<{
@@ -172,6 +180,11 @@ const Settings: React.FC = () => {
                         updatePrimaryColor(response.data['branding_primary_color']);
                     }
 
+                    // Load meeting platform
+                    const platform = (response.data['meeting_platform'] || 'zoom') as 'zoom' | 'jitsi';
+                    setMeetingPlatform(platform);
+
+                    // Load Zoom settings
                     const zoomAccountId = response.data['zoom_account_id'] || '';
                     const zoomClientId = response.data['zoom_client_id'] || '';
                     const zoomClientSecret = response.data['zoom_client_secret'] || '';
@@ -185,6 +198,17 @@ const Settings: React.FC = () => {
                     if (zoomAccountId && zoomClientId && zoomClientSecret) {
                         fetchZoomAccount();
                     }
+
+                    // Load Jitsi settings
+                    const jitsiDomain = response.data['jitsi_domain'] || 'https://meet.jitsi.org';
+                    const jitsiAppId = response.data['jitsi_app_id'] || '';
+                    const jitsiAppSecret = response.data['jitsi_app_secret'] || '';
+
+                    setJitsiSettings({
+                        domain: jitsiDomain,
+                        appId: jitsiAppId,
+                        appSecret: jitsiAppSecret
+                    });
 
                     setRazorpaySettings({
                         enabled: response.data['razorpay_enabled'] || 'false',
@@ -243,12 +267,29 @@ const Settings: React.FC = () => {
                     updateSetting('email_encryption', emailSettings.encryption, 'email', 'Encryption')
                 ]);
             } else if (tab === 3) {
-                await Promise.all([
-                    updateSetting('zoom_account_id', zoomSettings.accountId, 'zoom', 'Zoom Account ID'),
-                    updateSetting('zoom_client_id', zoomSettings.clientId, 'zoom', 'Zoom Client ID'),
-                    updateSetting('zoom_client_secret', zoomSettings.clientSecret, 'zoom', 'Zoom Client Secret')
-                ]);
-                await fetchZoomAccount();
+                const savePromises: Promise<any>[] = [
+                    updateSetting('meeting_platform', meetingPlatform, 'general', 'Meeting Platform')
+                ];
+
+                if (meetingPlatform === 'zoom') {
+                    savePromises.push(
+                        updateSetting('zoom_account_id', zoomSettings.accountId, 'zoom', 'Zoom Account ID'),
+                        updateSetting('zoom_client_id', zoomSettings.clientId, 'zoom', 'Zoom Client ID'),
+                        updateSetting('zoom_client_secret', zoomSettings.clientSecret, 'zoom', 'Zoom Client Secret')
+                    );
+                } else if (meetingPlatform === 'jitsi') {
+                    savePromises.push(
+                        updateSetting('jitsi_domain', jitsiSettings.domain, 'jitsi', 'Jitsi Domain'),
+                        updateSetting('jitsi_app_id', jitsiSettings.appId, 'jitsi', 'Jitsi App ID'),
+                        updateSetting('jitsi_app_secret', jitsiSettings.appSecret, 'jitsi', 'Jitsi App Secret')
+                    );
+                }
+
+                await Promise.all(savePromises);
+                
+                if (meetingPlatform === 'zoom') {
+                    await fetchZoomAccount();
+                }
             } else if (tab === 2) {
                 await Promise.all([
                     updateSetting('razorpay_enabled', razorpaySettings.enabled, 'payment', 'Razorpay Enabled'),
@@ -454,42 +495,151 @@ const Settings: React.FC = () => {
                             <Box sx={{ p: 3 }}>
                                 <Grid container spacing={3}>
                                     <Grid size={{ xs: 12 }}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                            <Typography variant="body2" sx={{ fontWeight: 500 }}>Zoom Integration</Typography>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                                            <Typography variant="body2" sx={{ fontWeight: 600 }}>Meeting Platform</Typography>
                                             <InfoIcon sx={{ fontSize: 16, color: '#94a3b8' }} />
                                         </Box>
                                         <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mb: 2 }}>
-                                            Connect your Zoom account (Server-to-Server OAuth) to schedule and manage live classes directly from the LMS.
+                                            Select which platform to use for live classes. You can enable either Zoom or Jitsi, but not both.
                                         </Typography>
 
-                                        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, mb: 2 }}>
-                                            <TextField
-                                                fullWidth
-                                                size="small"
-                                                label="Zoom Account ID"
-                                                value={zoomSettings.accountId}
-                                                onChange={(e) => setZoomSettings({ ...zoomSettings, accountId: e.target.value })}
-                                                placeholder="Enter Account ID"
-                                            />
-                                            <TextField
-                                                fullWidth
-                                                size="small"
-                                                label="Zoom Client ID"
-                                                value={zoomSettings.clientId}
-                                                onChange={(e) => setZoomSettings({ ...zoomSettings, clientId: e.target.value })}
-                                                placeholder="Enter Client ID"
-                                            />
+                                        <Box sx={{ display: 'flex', gap: 4, mb: 3 }}>
+                                            <FormControl>
+                                                <Box
+                                                    sx={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: 1,
+                                                        p: 1.5,
+                                                        border: `2px solid ${meetingPlatform === 'zoom' ? primaryColor : '#e7edf3'}`,
+                                                        borderRadius: 1,
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.2s',
+                                                        '&:hover': { borderColor: primaryColor }
+                                                    }}
+                                                    onClick={() => setMeetingPlatform('zoom')}
+                                                >
+                                                    <input
+                                                        type="radio"
+                                                        name="platform"
+                                                        value="zoom"
+                                                        checked={meetingPlatform === 'zoom'}
+                                                        onChange={() => setMeetingPlatform('zoom')}
+                                                    />
+                                                    <Typography variant="body2" sx={{ fontWeight: 500 }}>Zoom</Typography>
+                                                </Box>
+                                            </FormControl>
+
+                                            <FormControl>
+                                                <Box
+                                                    sx={{
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        gap: 1,
+                                                        p: 1.5,
+                                                        border: `2px solid ${meetingPlatform === 'jitsi' ? primaryColor : '#e7edf3'}`,
+                                                        borderRadius: 1,
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.2s',
+                                                        '&:hover': { borderColor: primaryColor }
+                                                    }}
+                                                    onClick={() => setMeetingPlatform('jitsi')}
+                                                >
+                                                    <input
+                                                        type="radio"
+                                                        name="platform"
+                                                        value="jitsi"
+                                                        checked={meetingPlatform === 'jitsi'}
+                                                        onChange={() => setMeetingPlatform('jitsi')}
+                                                    />
+                                                    <Typography variant="body2" sx={{ fontWeight: 500 }}>Jitsi</Typography>
+                                                </Box>
+                                            </FormControl>
                                         </Box>
-                                        <TextField
-                                            fullWidth
-                                            size="small"
-                                            label="Zoom Client Secret"
-                                            type="password"
-                                            value={zoomSettings.clientSecret}
-                                            onChange={(e) => setZoomSettings({ ...zoomSettings, clientSecret: e.target.value })}
-                                            placeholder="Enter Client Secret"
-                                            sx={{ mb: 3 }}
-                                        />
+
+                                        <Divider sx={{ my: 3 }} />
+
+                                        {meetingPlatform === 'zoom' && (
+                                            <>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                                    <Typography variant="body2" sx={{ fontWeight: 500 }}>Zoom Integration</Typography>
+                                                    <InfoIcon sx={{ fontSize: 16, color: '#94a3b8' }} />
+                                                </Box>
+                                                <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mb: 2 }}>
+                                                    Connect your Zoom account (Server-to-Server OAuth) to schedule and manage live classes directly from the LMS.
+                                                </Typography>
+
+                                                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2, mb: 2 }}>
+                                                    <TextField
+                                                        fullWidth
+                                                        size="small"
+                                                        label="Zoom Account ID"
+                                                        value={zoomSettings.accountId}
+                                                        onChange={(e) => setZoomSettings({ ...zoomSettings, accountId: e.target.value })}
+                                                        placeholder="Enter Account ID"
+                                                    />
+                                                    <TextField
+                                                        fullWidth
+                                                        size="small"
+                                                        label="Zoom Client ID"
+                                                        value={zoomSettings.clientId}
+                                                        onChange={(e) => setZoomSettings({ ...zoomSettings, clientId: e.target.value })}
+                                                        placeholder="Enter Client ID"
+                                                    />
+                                                </Box>
+                                                <TextField
+                                                    fullWidth
+                                                    size="small"
+                                                    label="Zoom Client Secret"
+                                                    type="password"
+                                                    value={zoomSettings.clientSecret}
+                                                    onChange={(e) => setZoomSettings({ ...zoomSettings, clientSecret: e.target.value })}
+                                                    placeholder="Enter Client Secret"
+                                                    sx={{ mb: 3 }}
+                                                />
+                                            </>
+                                        )}
+
+                                        {meetingPlatform === 'jitsi' && (
+                                            <>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                                    <Typography variant="body2" sx={{ fontWeight: 500 }}>Jitsi Integration</Typography>
+                                                    <InfoIcon sx={{ fontSize: 16, color: '#94a3b8' }} />
+                                                </Box>
+                                                <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mb: 2 }}>
+                                                    Configure Jitsi Meet for hosting open-source video conferences. Leave settings default for jitsi.org or configure your self-hosted instance.
+                                                </Typography>
+
+                                                <TextField
+                                                    fullWidth
+                                                    size="small"
+                                                    label="Jitsi Domain"
+                                                    value={jitsiSettings.domain}
+                                                    onChange={(e) => setJitsiSettings({ ...jitsiSettings, domain: e.target.value })}
+                                                    placeholder="https://meet.jitsi.org"
+                                                    sx={{ mb: 2 }}
+                                                />
+                                                <TextField
+                                                    fullWidth
+                                                    size="small"
+                                                    label="App ID (Optional)"
+                                                    value={jitsiSettings.appId}
+                                                    onChange={(e) => setJitsiSettings({ ...jitsiSettings, appId: e.target.value })}
+                                                    placeholder="Leave empty for public jitsi.org"
+                                                    sx={{ mb: 2 }}
+                                                />
+                                                <TextField
+                                                    fullWidth
+                                                    size="small"
+                                                    label="App Secret (Optional)"
+                                                    type="password"
+                                                    value={jitsiSettings.appSecret}
+                                                    onChange={(e) => setJitsiSettings({ ...jitsiSettings, appSecret: e.target.value })}
+                                                    placeholder="Leave empty for public jitsi.org"
+                                                    sx={{ mb: 3 }}
+                                                />
+                                            </>
+                                        )}
 
                                         <Divider sx={{ my: 2 }} />
 
@@ -511,7 +661,7 @@ const Settings: React.FC = () => {
                                             </Button>
                                         </Box>
 
-                                        {showZoomInfo && zoomAccountInfo && (
+                                        {showZoomInfo && zoomAccountInfo && meetingPlatform === 'zoom' && (
                                             <Box
                                                 sx={{
                                                     mt: 3,

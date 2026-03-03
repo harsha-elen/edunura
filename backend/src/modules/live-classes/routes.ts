@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { body } from 'express-validator';
-import { createLiveClass, updateLiveClass, getLiveClassesByCourse, deleteLiveClass, getZoomSignature, getAllLiveClasses } from './controller';
+import { createLiveClass, updateLiveClass, getLiveClassesByCourse, deleteLiveClass, getZoomSignature, getJitsiConfig, getAllLiveClasses, getLiveClassStatus, endLiveSession, hostHeartbeat, getJitsiBranding } from './controller';
 import { authenticate, authorize } from '../../middleware/auth';
 
 const router = Router();
@@ -18,6 +18,10 @@ const updateLiveClassValidation = [
     body('start_time').optional(),
     body('duration').isInt({ min: 1 }).withMessage('Duration must be at least 1 minute'),
 ];
+
+// Public branding endpoint — fetched by Jitsi browser client (no auth headers sent)
+// Must be registered BEFORE router.use(authenticate)
+router.get('/branding', getJitsiBranding);
 
 // Routes
 router.use(authenticate); // Protect all routes
@@ -45,6 +49,32 @@ router.get(
     '/:id/join-token',
     // Allow authenticated users to get zoom signature
     getZoomSignature
+);
+
+router.get(
+    '/:id/jitsi-config',
+    // Allow authenticated users to get jitsi config
+    getJitsiConfig
+);
+
+router.get(
+    '/:id/status',
+    // Students poll this to check if host has joined yet
+    getLiveClassStatus
+);
+
+router.post(
+    '/:id/heartbeat',
+    // Host pings every 15s while in meeting; isLive expires after 35s of silence
+    authorize('admin', 'teacher', 'moderator'),
+    hostHeartbeat
+);
+
+router.post(
+    '/:id/end-session',
+    // Best-effort: host explicitly ends, resets immediately without waiting 35s
+    authorize('admin', 'teacher', 'moderator'),
+    endLiveSession
 );
 
 router.put(

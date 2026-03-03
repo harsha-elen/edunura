@@ -49,6 +49,8 @@ import {
     markLessonIncomplete,
     getVideoUrl,
     getResourceUrl,
+    getJitsiConfig,
+    getLiveClassStatus,
     CourseWithSections,
     CourseProgress,
     Lesson,
@@ -120,6 +122,10 @@ export default function CoursePlayer() {
     const [activeTab, setActiveTab] = useState(0);
     const [expandedModules, setExpandedModules] = useState<number[]>([]);
     const [completingLesson, setCompletingLesson] = useState<number | null>(null);
+    const [jitsiEmbedUrl, setJitsiEmbedUrl] = useState<string | null>(null);
+    const [jitsiLoading, setJitsiLoading] = useState(false);
+    // null = not yet checked, false = host not in yet, true = host joined
+    const [hostJoined, setHostJoined] = useState<boolean | null>(null);
     const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' }>({
         open: false,
         message: '',
@@ -196,8 +202,60 @@ export default function CoursePlayer() {
 
     const handleLessonClick = (lesson: Lesson) => {
         setCurrentLesson(lesson);
+        setJitsiEmbedUrl(null); // Reset embedded meeting when switching lessons
+        setHostJoined(null);    // Reset host status for new lesson
         router.push(`/course/${courseId}/lesson/${lesson.id}`);
     };
+
+    // ─── Poll host presence for live Jitsi lessons ────────────────────
+    // Polls every 8s until hostJoined=true, then stops. Clears when lesson changes.
+    useEffect(() => {
+        const isJitsiLive =
+            currentLesson?.content_type === 'live' &&
+            currentLesson?.content_platform === 'jitsi';
+
+        if (!isJitsiLive || hostJoined === true) return;
+
+        const sessionId = currentLesson.jitsi_room_name || currentLesson.id;
+
+        let cancelled = false;
+        const checkStatus = async () => {
+            try {
+                const status = await getLiveClassStatus(sessionId);
+                if (!cancelled) setHostJoined(status.isLive);
+            } catch {
+                // silently ignore poll errors
+            }
+        };
+
+        checkStatus(); // immediate first check
+        const interval = setInterval(checkStatus, 8000);
+        return () => {
+            cancelled = true;
+            clearInterval(interval);
+        };
+    }, [currentLesson, hostJoined]);
+
+    // ─── Jitsi Meeting End Handler ────────────────────────────
+    // Listen for Jitsi's postMessage when meeting ends and close the iframe
+    useEffect(() => {
+        if (!jitsiEmbedUrl) return;
+        const handleJitsiMessage = (event: MessageEvent) => {
+            try {
+                const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+                if (
+                    data?.action === 'ready-to-close' ||
+                    data?.action === 'video-conference-left' ||
+                    data?.event === 'VIDEO_CONFERENCE_LEFT' ||
+                    data?.event === 'READY_TO_CLOSE'
+                ) {
+                    setJitsiEmbedUrl(null); // Close meeting, return to lesson view
+                }
+            } catch { /* ignore non-JSON messages */ }
+        };
+        window.addEventListener('message', handleJitsiMessage);
+        return () => window.removeEventListener('message', handleJitsiMessage);
+    }, [jitsiEmbedUrl]);
 
     const toggleModule = (moduleId: number) => {
         setExpandedModules(prev =>
@@ -417,55 +475,161 @@ export default function CoursePlayer() {
                         overflow: 'hidden',
                     }}>
                         {currentLesson?.content_type === 'live' ? (
-                            currentLesson?.zoom_join_url ? (
-                                <Box sx={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    minHeight: 500,
-                                    bgcolor: '#1a1a1a',
-                                    p: 4,
-                                }}>
-                                    <VideoCallIcon sx={{ fontSize: 80, color: theme.palette.primary.main, mb: 2 }} />
-                                    <Typography variant="h5" sx={{ color: '#fff', fontWeight: 700, mb: 1 }}>
-                                        Live Class in Progress
-                                    </Typography>
-                                    <Typography sx={{ color: 'rgba(255,255,255,0.7)', mb: 3, textAlign: 'center' }}>
-                                        {currentLesson?.title}
-                                    </Typography>
-                                    <Button
-                                        variant="contained"
-                                        size="large"
-                                        startIcon={<VideoCallIcon />}
-                                        onClick={() => {
-                                            if (currentLesson?.zoom_join_url) {
-                                                window.open(currentLesson.zoom_join_url, '_blank');
-                                            }
-                                        }}
-                                        sx={{
-                                            textTransform: 'none',
-                                            fontWeight: 600,
-                                            px: 4,
-                                            py: 1.5,
-                                            fontSize: '1rem',
-                                            bgcolor: theme.palette.primary.main,
-                                            '&:hover': { bgcolor: theme.palette.primary.dark },
-                                        }}
-                                    >
-                                        Join Meeting in Zoom
-                                    </Button>
-                                    <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', mt: 2 }}>
-                                        Opens in Zoom app or browser
-                                    </Typography>
-                                </Box>
-                            ) : (
-                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 500, bgcolor: '#1a1a1a' }}>
-                                    <Box sx={{ textAlign: 'center', color: '#fff' }}>
-                                        <PlayIcon sx={{ fontSize: 80, opacity: 0.5 }} />
-                                        <Typography variant="h6" sx={{ mt: 2 }}>Live class starting soon...</Typography>
+                            currentLesson?.content_platform === 'jitsi' ? (
+                                jitsiEmbedUrl ? (
+                                    /* ── Embedded Jitsi Meeting (same as teacher/admin) ── */
+                                    <Box sx={{ width: '100%', minHeight: 500, position: 'relative', bgcolor: '#000' }}>
+                                        <iframe
+                                            key={jitsiEmbedUrl}
+                                            src={jitsiEmbedUrl}
+                                            style={{ width: '100%', height: '100%', minHeight: 500, border: 'none' }}
+                                            allow="camera; microphone; fullscreen; display-capture; autoplay; clipboard-write"
+                                            title="Jitsi Meeting"
+                                        />
                                     </Box>
-                                </Box>
+                                ) : currentLesson?.jitsi_join_url ? (
+                                    <Box sx={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        minHeight: 500,
+                                        bgcolor: '#1a1a1a',
+                                        p: 4,
+                                    }}>
+                                        <VideoCallIcon sx={{ fontSize: 80, color: hostJoined ? '#246FE0' : '#94a3b8', mb: 2 }} />
+                                        <Typography variant="h5" sx={{ color: '#fff', fontWeight: 700, mb: 1 }}>
+                                            Live Class in Progress
+                                        </Typography>
+                                        <Typography sx={{ color: 'rgba(255,255,255,0.7)', mb: 1, textAlign: 'center' }}>
+                                            {currentLesson?.title}
+                                        </Typography>
+                                        {/* Host status indicator */}
+                                        <Typography sx={{
+                                            color: hostJoined ? '#4ade80' : '#fbbf24',
+                                            fontSize: '0.8rem',
+                                            mb: 3,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 0.5,
+                                        }}>
+                                            <Box component="span" sx={{
+                                                display: 'inline-block',
+                                                width: 8,
+                                                height: 8,
+                                                borderRadius: '50%',
+                                                bgcolor: hostJoined ? '#4ade80' : '#fbbf24',
+                                                animation: hostJoined ? 'none' : 'pulse 1.5s ease-in-out infinite',
+                                                '@keyframes pulse': {
+                                                    '0%, 100%': { opacity: 1 },
+                                                    '50%': { opacity: 0.3 },
+                                                },
+                                            }} />
+                                            {hostJoined === null ? 'Checking host status...' : hostJoined ? 'Host is in the meeting' : 'Waiting for host to join...'}
+                                        </Typography>
+                                        <Button
+                                            variant="contained"
+                                            size="large"
+                                            disabled={jitsiLoading || hostJoined !== true}
+                                            startIcon={jitsiLoading ? <CircularProgress size={20} color="inherit" /> : <VideoCallIcon />}
+                                            onClick={async () => {
+                                                if (!currentLesson?.jitsi_room_name && !currentLesson?.jitsi_join_url) return;
+                                                try {
+                                                    setJitsiLoading(true);
+                                                    const res = await getJitsiConfig(currentLesson.jitsi_room_name || currentLesson.id);
+                                                    const { domain, roomName, jwt, jitsiEmbedUrl } = res.data;
+                                                    // Prefer pre-built URL (includes JWT + toolbar config in hash)
+                                                    let url: string;
+                                                    if (jitsiEmbedUrl) {
+                                                        url = jitsiEmbedUrl;
+                                                    } else {
+                                                        const baseDomain = domain.startsWith('http') ? domain : `https://${domain}`;
+                                                        url = jwt ? `${baseDomain}/${roomName}?jwt=${jwt}` : `${baseDomain}/${roomName}`;
+                                                    }
+                                                    setJitsiEmbedUrl(url);
+                                                } catch (err) {
+                                                    console.error('Failed to get Jitsi config:', err);
+                                                    setSnackbar({ open: true, message: 'Failed to join meeting. Please try again.', severity: 'error' });
+                                                } finally {
+                                                    setJitsiLoading(false);
+                                                }
+                                            }}
+                                            sx={{
+                                                textTransform: 'none',
+                                                fontWeight: 600,
+                                                px: 4,
+                                                py: 1.5,
+                                                fontSize: '1rem',
+                                                bgcolor: hostJoined ? '#246FE0' : '#475569',
+                                                '&:hover': { bgcolor: hostJoined ? '#1A5CD8' : '#475569' },
+                                                '&.Mui-disabled': { bgcolor: '#334155', color: 'rgba(255,255,255,0.4)' },
+                                            }}
+                                        >
+                                            {jitsiLoading ? 'Connecting...' : hostJoined ? 'Join Live Class' : 'Waiting for Host...'}
+                                        </Button>
+                                        <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', mt: 2 }}>
+                                            Meeting will load right here
+                                        </Typography>
+                                    </Box>
+                                ) : (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 500, bgcolor: '#1a1a1a' }}>
+                                        <Box sx={{ textAlign: 'center', color: '#fff' }}>
+                                            <PlayIcon sx={{ fontSize: 80, opacity: 0.5 }} />
+                                            <Typography variant="h6" sx={{ mt: 2 }}>Jitsi live class starting soon...</Typography>
+                                        </Box>
+                                    </Box>
+                                )
+                            ) : (
+                                currentLesson?.zoom_join_url ? (
+                                    <Box sx={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        minHeight: 500,
+                                        bgcolor: '#1a1a1a',
+                                        p: 4,
+                                    }}>
+                                        <VideoCallIcon sx={{ fontSize: 80, color: theme.palette.primary.main, mb: 2 }} />
+                                        <Typography variant="h5" sx={{ color: '#fff', fontWeight: 700, mb: 1 }}>
+                                            Live Class in Progress
+                                        </Typography>
+                                        <Typography sx={{ color: 'rgba(255,255,255,0.7)', mb: 3, textAlign: 'center' }}>
+                                            {currentLesson?.title}
+                                        </Typography>
+                                        <Button
+                                            variant="contained"
+                                            size="large"
+                                            startIcon={<VideoCallIcon />}
+                                            onClick={() => {
+                                                if (currentLesson?.zoom_join_url) {
+                                                    window.open(currentLesson.zoom_join_url, '_blank');
+                                                }
+                                            }}
+                                            sx={{
+                                                textTransform: 'none',
+                                                fontWeight: 600,
+                                                px: 4,
+                                                py: 1.5,
+                                                fontSize: '1rem',
+                                                bgcolor: theme.palette.primary.main,
+                                                '&:hover': { bgcolor: theme.palette.primary.dark },
+                                            }}
+                                        >
+                                            Join Meeting in Zoom
+                                        </Button>
+                                        <Typography sx={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.75rem', mt: 2 }}>
+                                            Opens in Zoom app or browser
+                                        </Typography>
+                                    </Box>
+                                ) : (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 500, bgcolor: '#1a1a1a' }}>
+                                        <Box sx={{ textAlign: 'center', color: '#fff' }}>
+                                            <PlayIcon sx={{ fontSize: 80, opacity: 0.5 }} />
+                                            <Typography variant="h6" sx={{ mt: 2 }}>Live class starting soon...</Typography>
+                                        </Box>
+                                    </Box>
+                                )
                             )
                         ) : currentLesson?.file_path ? (
                             <VideoPlayer

@@ -21,6 +21,7 @@ interface LiveClassSession {
     start_time: string;
     duration: number;
     meeting_id?: string;
+    meeting_type?: 'zoom' | 'jitsi';
     start_url?: string;
     join_url?: string;
     password?: string;
@@ -31,6 +32,7 @@ interface LiveClassSession {
     lesson?: {
         id: number;
         title: string;
+        content_platform?: 'zoom' | 'jitsi';
     };
 }
 

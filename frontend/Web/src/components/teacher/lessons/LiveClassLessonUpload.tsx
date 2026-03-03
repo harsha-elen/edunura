@@ -24,7 +24,7 @@ import {
     Description as DescriptionIcon,
 } from '@mui/icons-material';
 import { useTheme, alpha } from '@mui/material/styles';
-import { getZoomAccount } from '@/services/settings';
+import { getZoomAccount, getMeetingPlatform } from '@/services/settings';
 import { createLiveSession, updateLiveSession } from '@/services/liveClassService';
 import { uploadLessonResource, deleteLessonResource } from '@/services/courseService';
 
@@ -92,6 +92,7 @@ const LiveClassLessonUpload: React.FC<LiveClassLessonUploadProps> = ({
     const [error, setError] = useState<string | null>(null);
     const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
     const [zoomAccountInfo, setZoomAccountInfo] = useState<any>(null);
+    const [meetingPlatform, setMeetingPlatform] = useState<'zoom' | 'jitsi'>('zoom');
     const hasInitializedRef = useRef(false);
     const isEditMode = !!initialData;
 
@@ -115,24 +116,29 @@ const LiveClassLessonUpload: React.FC<LiveClassLessonUploadProps> = ({
     }, [initialData]);
 
     useEffect(() => {
-        const fetchZoomInfo = async () => {
+        const fetchPlatformInfo = async () => {
             try {
-                const response = await getZoomAccount();
-                if (response?.data) {
-                    setZoomAccountInfo(response.data);
-                    if (!hasInitializedRef.current && response.data.type === 1 && !initialData) {
-                        setMinutes('40');
-                        setHours('0');
-                        hasInitializedRef.current = true;
+                const platform = await getMeetingPlatform();
+                setMeetingPlatform(platform);
+
+                if (platform === 'zoom') {
+                    const response = await getZoomAccount();
+                    if (response?.data) {
+                        setZoomAccountInfo(response.data);
+                        if (!hasInitializedRef.current && response.data.type === 1 && !initialData) {
+                            setMinutes('40');
+                            setHours('0');
+                            hasInitializedRef.current = true;
+                        }
                     }
                 }
-            } catch { /* zoom not configured */ }
+            } catch { /* platform not configured */ }
         };
-        fetchZoomInfo();
+        fetchPlatformInfo();
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    const isFreeAccount = zoomAccountInfo?.type === 1;
+    const isFreeAccount = meetingPlatform === 'zoom' && zoomAccountInfo?.type === 1;
     const maxDurationForFree = 40;
 
     const now = new Date();
@@ -252,7 +258,9 @@ const LiveClassLessonUpload: React.FC<LiveClassLessonUploadProps> = ({
                         <Typography variant="h6" sx={{ fontWeight: 700 }}>
                             {isEditMode ? 'Edit Live Class' : 'Schedule New Live Class'}
                         </Typography>
-                        <Typography variant="body2" color="text.secondary">Set up your Zoom session</Typography>
+                        <Typography variant="body2" color="text.secondary">
+                            {meetingPlatform === 'jitsi' ? 'Set up your Jitsi session' : 'Set up your Zoom session'}
+                        </Typography>
                     </Box>
                 </Box>
                 <IconButton onClick={onCancel}><CloseIcon /></IconButton>

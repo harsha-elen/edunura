@@ -29,3 +29,13 @@ export const getZoomAccount = async () => {
     const response = await apiClient.get('/settings/zoom-account');
     return response.data;
 };
+
+export const getMeetingPlatform = async (): Promise<'zoom' | 'jitsi'> => {
+    try {
+        const response = await apiClient.get('/settings');
+        const data = response.data?.data;
+        return data?.meeting_platform === 'jitsi' ? 'jitsi' : 'zoom';
+    } catch {
+        return 'zoom'; // default to zoom
+    }
+};

@@ -27,3 +27,8 @@ export const deleteLiveSession = async (id: string | number) => {
     const response = await apiClient.delete(`/live-classes/${id}`);
     return response.data;
 };
+
+export const getJitsiConfig = async (sessionId: string | number) => {
+    const response = await apiClient.get(`/live-classes/${sessionId}/jitsi-config`);
+    return response.data;
+};

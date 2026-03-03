@@ -29,6 +29,7 @@ interface LiveClassSession {
     start_time: string;
     duration: number;
     meeting_id?: string;
+    meeting_type?: 'zoom' | 'jitsi';
     start_url?: string;
     join_url?: string;
     password?: string;
@@ -39,6 +40,7 @@ interface LiveClassSession {
     lesson?: {
         id: number;
         title: string;
+        content_platform?: 'zoom' | 'jitsi';
     };
     instructor?: {
         first_name: string;
@@ -271,7 +273,7 @@ export default function LiveClassesPage() {
                                                 </Grid>
                                                 <Grid size={{ xs: 12, md: 3.5 }} sx={{ textAlign: { md: 'right' } }}>
                                                     <Button variant="contained" fullWidth onClick={() => router.push(session.lesson ? `/course/${session.course_id}/lesson/${session.lesson.id}` : `/course/${session.course_id}/learn`)} sx={{ bgcolor: theme.palette.primary.main, color: theme.palette.primary.contrastText, fontWeight: 800, py: 1.75, borderRadius: 2.5, textTransform: 'none', fontSize: '1rem', boxShadow: `0 10px 15px -3px ${alpha(theme.palette.primary.main, 0.3)}`, '&:hover': { bgcolor: theme.palette.primary.dark } }}>
-                                                        Join via Zoom
+                                                        Join Live Class
                                                     </Button>
                                                 </Grid>
                                             </Grid>
@@ -380,7 +382,7 @@ export default function LiveClassesPage() {
                             </Typography>
                             <Box sx={{ display: 'flex', justifyContent: 'center', gap: 3, mt: 1.5 }}>
                                 <Link href="#" sx={{ color: theme.palette.primary.main, textDecoration: 'none', fontSize: 12, fontWeight: 600 }}>Technical Support</Link>
-                                <Link href="#" sx={{ color: theme.palette.primary.main, textDecoration: 'none', fontSize: 12, fontWeight: 600 }}>Zoom Guide</Link>
+                                <Link href="#" sx={{ color: theme.palette.primary.main, textDecoration: 'none', fontSize: 12, fontWeight: 600 }}>Help Guide</Link>
                             </Box>
                         </Box>
                     </Box>

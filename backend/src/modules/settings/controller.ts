@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import SystemSetting, { SettingCategory } from '../../models/SystemSetting';
 import nodemailer from 'nodemailer';
 import ZoomService from '../../services/zoomService';
+import MigrationRunner from '../../utils/migrationRunner';
+import sequelize from '../../config/database';
 import jwt from 'jsonwebtoken';
 
 export const uploadFile = async (req: Request, res: Response) => {
@@ -66,6 +68,7 @@ export const getSettings = async (req: Request, res: Response) => {
             'razorpay_key_secret', 'razorpay_webhook_secret',
             'email_smtp_pass', 'email_smtp_user',
             'zoom_client_secret', 'zoom_client_id',
+            'jitsi_app_secret',
         ];
 
         // Check if request is authenticated (manually check header since route is public)
@@ -245,6 +248,56 @@ export const checkZoomAccount = async (_req: Request, res: Response) => {
         return res.status(500).json({
             status: 'error',
             message: 'Failed to check Zoom account. Please verify your Zoom configuration.'
+        });
+    }
+};
+
+/**
+ * Get database migration status
+ */
+export const getMigrationStatus = async (_req: Request, res: Response) => {
+    try {
+        const runner = new MigrationRunner(sequelize);
+        const status = await runner.getStatus();
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Migration status retrieved',
+            data: {
+                pending: status.pending.length,
+                executed: status.executed.length,
+                migrations: {
+                    pending: status.pending.map((m: any) => m.name),
+                    executed: status.executed.map((m: any) => m.name)
+                }
+            }
+        });
+    } catch (error: any) {
+        console.error('Migration status error:', error);
+        res.status(500).json({
+            status: 'error',
+            message: 'Failed to get migration status'
+        });
+    }
+};
+
+/**
+ * Manually trigger pending migrations (emergency/admin only)
+ */
+export const runMigrations = async (_req: Request, res: Response) => {
+    try {
+        const runner = new MigrationRunner(sequelize);
+        await runner.runPendingMigrations();
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Migrations executed successfully'
+        });
+    } catch (error: any) {
+        console.error('Migration execution error:', error);
+        res.status(500).json({
+            status: 'error',
+            message: 'Failed to execute migrations: ' + error.message
         });
     }
 };

@@ -564,7 +564,7 @@ const TeacherLayoutComponent: React.FC<TeacherLayoutComponentProps> = ({ childre
                 </Box>
 
                 {/* Page Content */}
-                <Box sx={{ flex: 1, overflowY: 'auto', overflow: 'hidden' }}>
+                <Box sx={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
                     {children}
                 </Box>
             </Box>

@@ -28,6 +28,13 @@ interface Course {
     } | null;
 }
 
+interface Category {
+    id: number;
+    name: string;
+    slug: string;
+    parent_id?: number | null;
+}
+
 interface CoursesResponse {
     status: string;
     data: {
@@ -160,6 +167,9 @@ const CourseCard = ({ course, siteName }: { course: Course; siteName: string }) 
 // ---- Main Page ----
 const CoursesPage = () => {
     const [courses, setCourses] = useState<Course[]>([]);
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [activeParent, setActiveParent] = useState<Category | null>(null);
+    const [activeChild, setActiveChild] = useState<Category | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [search, setSearch] = useState('');
@@ -181,7 +191,23 @@ const CoursesPage = () => {
             .catch(() => {});
     }, []);
 
-    const fetchCourses = useCallback(async (searchTerm: string, pageNum: number) => {
+    // Load available categories
+    useEffect(() => {
+        fetch(`${API_URL}/categories`)
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    const cats = Array.isArray(data.data) ? data.data : data.data?.categories || [];
+                    setCategories(cats);
+                }
+            })
+            .catch(() => {});
+    }, []);
+
+    const fetchCourses = useCallback(async (searchTerm: string, pageNum: number, categoryFilter: string | null) => {
+        if (pageNum === 1) {
+            setCourses([]); // Clear grid immediately when switching categories/searching
+        }
         setLoading(true);
         setError(null);
         try {
@@ -190,6 +216,7 @@ const CoursesPage = () => {
                 limit: String(LIMIT),
             });
             if (searchTerm.trim()) params.append('search', searchTerm.trim());
+            if (categoryFilter) params.append('category', categoryFilter);
 
             const res = await fetch(`${API_URL}/courses/public?${params.toString()}`);
             if (!res.ok) throw new Error(`Failed to fetch courses (${res.status})`);
@@ -211,10 +238,23 @@ const CoursesPage = () => {
         }
     }, []);
 
+    const parentCategories = categories.filter(c => !c.parent_id);
+    const childCategories = activeParent ? categories.filter(c => c.parent_id === activeParent.id) : [];
+    const selectedCategoryName = activeChild ? activeChild.name : (activeParent ? activeParent.name : null);
+
+    const handleParentClick = (cat: Category | null) => {
+        setActiveParent(cat);
+        setActiveChild(null); // Reset child when changing parent
+    };
+
+    const handleChildClick = (cat: Category | null) => {
+        setActiveChild(cat);
+    };
+
     useEffect(() => {
         setPage(1);
-        fetchCourses(search, 1);
-    }, [search, fetchCourses]);
+        fetchCourses(search, 1, selectedCategoryName);
+    }, [search, selectedCategoryName, fetchCourses]);
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
@@ -224,7 +264,7 @@ const CoursesPage = () => {
     const handleLoadMore = () => {
         const nextPage = page + 1;
         setPage(nextPage);
-        fetchCourses(search, nextPage);
+        fetchCourses(search, nextPage, selectedCategoryName);
     };
 
     return (
@@ -259,7 +299,7 @@ const CoursesPage = () => {
                             <p className="text-red-500 font-semibold mb-2">Failed to load courses</p>
                             <p className="text-slate-400 text-sm mb-6">{error}</p>
                             <button
-                                onClick={() => fetchCourses(search, 1)}
+                                onClick={() => fetchCourses(search, 1, selectedCategoryName)}
                                 className="bg-primary text-white px-6 py-2 rounded-lg font-bold hover:bg-orange-600 transition-colors text-sm"
                             >
                                 Try Again
@@ -267,9 +307,67 @@ const CoursesPage = () => {
                         </div>
                     )}
 
+                    {/* Category Filter Pills - Parents Level */}
+                    {parentCategories.length > 0 && (
+                        <div className={`flex overflow-x-auto gap-2 snap-x hide-scrollbar ${childCategories.length > 0 ? 'pb-2' : 'pb-4 mb-2'}`} style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                            <button
+                                onClick={() => handleParentClick(null)}
+                                className={`snap-start whitespace-nowrap px-4 py-2 rounded-full text-sm font-semibold transition-colors border ${
+                                    activeParent === null
+                                        ? 'bg-primary text-white border-primary shadow-sm'
+                                        : 'bg-white text-slate-600 border-slate-200 hover:border-primary/50 hover:bg-slate-50'
+                                }`}
+                            >
+                                All Courses
+                            </button>
+                            {parentCategories.map(cat => (
+                                <button
+                                    key={cat.id}
+                                    onClick={() => handleParentClick(cat)}
+                                    className={`snap-start whitespace-nowrap px-4 py-2 rounded-full text-sm font-semibold transition-colors border ${
+                                        activeParent?.id === cat.id
+                                            ? 'bg-primary text-white border-primary shadow-sm'
+                                            : 'bg-white text-slate-600 border-slate-200 hover:border-primary/50 hover:bg-slate-50'
+                                    }`}
+                                >
+                                    {cat.name}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Category Filter Pills - Children Level (Contextual Sub-Nav) */}
+                    {childCategories.length > 0 && (
+                        <div className="flex overflow-x-auto pb-4 mb-2 gap-2 snap-x hide-scrollbar animate-in slide-in-from-top-2 fade-in duration-300" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                            <button
+                                onClick={() => handleChildClick(null)}
+                                className={`snap-start whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold transition-colors border ${
+                                    activeChild === null
+                                        ? 'bg-primary/10 text-primary border-primary/30'
+                                        : 'bg-transparent text-slate-500 border-transparent hover:bg-slate-100'
+                                }`}
+                            >
+                                All {activeParent?.name}
+                            </button>
+                            {childCategories.map(cat => (
+                                <button
+                                    key={cat.id}
+                                    onClick={() => handleChildClick(cat)}
+                                    className={`snap-start whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold transition-colors border ${
+                                        activeChild?.id === cat.id
+                                            ? 'bg-primary/10 text-primary border-primary/30 shadow-sm'
+                                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-primary/30 hover:bg-slate-100'
+                                    }`}
+                                >
+                                    {cat.name}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
                     {/* Course Grid */}
                     {!error && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-in fade-in duration-500">
                             {courses.map((course) => (
                                 <CourseCard key={course.id} course={course} siteName={siteName} />
                             ))}

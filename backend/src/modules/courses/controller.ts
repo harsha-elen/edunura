@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { Op } from 'sequelize';
 import { AuthRequest } from '../../middleware/auth';
-import { Course, CourseSection, Lesson, LessonResource, Enrollment, User } from '../../models';
+import { Course, CourseSection, Lesson, LessonResource, Enrollment, User, LessonDiscussion, LessonProgress } from '../../models';
 import { createCourseFolders, generateSlug, deleteCourseFolders, deleteFile } from '../../utils/folderService';
 import path from 'path';
 import ZoomService from '../../services/zoomService';
@@ -33,6 +33,7 @@ export const createCourse = async (req: AuthRequest, res: Response): Promise<voi
             visibility,
             meta_title,
             meta_description,
+            is_sequential,
         } = req.body;
         const userId = req.userId;
 
@@ -79,6 +80,7 @@ export const createCourse = async (req: AuthRequest, res: Response): Promise<voi
             visibility: visibility || 'draft',
             meta_title: meta_title || null,
             meta_description: meta_description || null,
+            is_sequential: is_sequential !== undefined ? is_sequential : false,
         });
 
         // Create course folder structure
@@ -296,6 +298,9 @@ export const getCourseById = async (req: AuthRequest, res: Response): Promise<vo
                 res.status(403).json({ status: 'error', message: 'You are not enrolled in this course' });
                 return;
             }
+            
+            // Stash enrollment for drip rules
+            (req as any).studentEnrollment = enrollment;
         }
 
         // For checkout flow, only expose public course information (no sensitive data)
@@ -327,9 +332,84 @@ export const getCourseById = async (req: AuthRequest, res: Response): Promise<vo
             return;
         }
 
+        let courseData = course.toJSON() as any;
+
+        // Drip Evaluation
+        if (userRole !== 'admin' && userRole !== 'teacher' && !isCheckoutFlow) {
+            const enrollment = (req as any).studentEnrollment;
+            if (enrollment) {
+                const progressRecords = await LessonProgress.findAll({
+                    where: { course_id: parseInt(id), student_id: userId, completed: true }
+                });
+                const completedLessonIds = new Set(progressRecords.map((p: any) => p.lesson_id));
+
+                let previousLessonCompleted = true; // For is_sequential checking
+
+                courseData.sections.forEach((section: any) => {
+                    section.lessons.forEach((lesson: any) => {
+                        let isLocked = false;
+                        let lockReason = '';
+
+                        // Rule 1: Release Date
+                        if (lesson.release_date && new Date(lesson.release_date) > new Date()) {
+                            isLocked = true;
+                            lockReason = `Available on ${new Date(lesson.release_date).toLocaleDateString()}`;
+                        }
+
+                        // Rule 2: Drip Days
+                        if (!isLocked && lesson.drip_days !== null && lesson.drip_days !== undefined) {
+                            const unlockDate = new Date(enrollment.enrollment_date);
+                            unlockDate.setDate(unlockDate.getDate() + lesson.drip_days);
+                            if (new Date() < unlockDate) {
+                                isLocked = true;
+                                lockReason = `Available ${lesson.drip_days} days after enrollment (on ${unlockDate.toLocaleDateString()})`;
+                            }
+                        }
+
+                        // Rule 3: Prerequisite Lesson
+                        if (!isLocked && lesson.prerequisite_lesson_id) {
+                            if (!completedLessonIds.has(lesson.prerequisite_lesson_id)) {
+                                isLocked = true;
+                                lockReason = `Complete the prerequisite lesson to unlock`;
+                            }
+                        }
+
+                        // Rule 4: Sequential Progression
+                        if (!isLocked && courseData.is_sequential) {
+                            if (!previousLessonCompleted) {
+                                isLocked = true;
+                                lockReason = `Complete previous lessons sequentially to unlock`;
+                            }
+                        }
+
+                        if (isLocked) {
+                            lesson.is_locked = true;
+                            lesson.lock_reason = lockReason;
+                            // Strip sensitive data
+                            delete lesson.file_path;
+                            delete lesson.content_body;
+                            delete lesson.zoom_join_url;
+                            if (lesson.resources) {
+                                lesson.resources = [];
+                            }
+                        } else {
+                            lesson.is_locked = false;
+                        }
+
+                        // Update sequence tracker for the NEXT lesson
+                        if (courseData.is_sequential) {
+                            if (!completedLessonIds.has(lesson.id)) {
+                                previousLessonCompleted = false;
+                            }
+                        }
+                    });
+                });
+            }
+        }
+
         res.status(200).json({
             status: 'success',
-            data: course,
+            data: courseData,
         });
     } catch (error: any) {
         console.error('Get Course Error:', error);
@@ -365,6 +445,7 @@ export const updateCourse = async (req: AuthRequest, res: Response): Promise<voi
             visibility,
             meta_title,
             meta_description,
+            is_sequential,
         } = req.body;
         const userId = req.userId;
 
@@ -430,6 +511,7 @@ export const updateCourse = async (req: AuthRequest, res: Response): Promise<voi
         if (visibility !== undefined) course.visibility = visibility;
         if (meta_title !== undefined) course.meta_title = meta_title;
         if (meta_description !== undefined) course.meta_description = meta_description;
+        if (is_sequential !== undefined) course.is_sequential = is_sequential;
 
         await course.save();
 
@@ -832,6 +914,9 @@ export const createLesson = async (req: AuthRequest, res: Response): Promise<voi
             is_free_preview,
             is_published,
             start_time, // Extract start_time
+            release_date,
+            drip_days,
+            prerequisite_lesson_id,
         } = req.body;
         const userId = req.userId;
 
@@ -868,6 +953,9 @@ export const createLesson = async (req: AuthRequest, res: Response): Promise<voi
             is_free_preview: is_free_preview !== undefined ? is_free_preview : false,
             is_published: is_published !== undefined ? is_published : true,
             start_time: start_time || null, // Pass start_time
+            release_date: release_date || null,
+            drip_days: drip_days !== undefined ? drip_days : null,
+            prerequisite_lesson_id: prerequisite_lesson_id || null,
         });
 
         res.status(201).json({
@@ -970,6 +1058,9 @@ export const updateLesson = async (req: AuthRequest, res: Response): Promise<voi
             is_free_preview,
             is_published,
             start_time, // Extract start_time
+            release_date,
+            drip_days,
+            prerequisite_lesson_id,
         } = req.body;
         const userId = req.userId;
 
@@ -1000,6 +1091,9 @@ export const updateLesson = async (req: AuthRequest, res: Response): Promise<voi
         if (is_free_preview !== undefined) lesson.is_free_preview = is_free_preview;
         if (is_published !== undefined) lesson.is_published = is_published;
         if (start_time !== undefined) lesson.start_time = start_time; // Update start_time
+        if (release_date !== undefined) lesson.release_date = release_date;
+        if (drip_days !== undefined) lesson.drip_days = drip_days;
+        if (prerequisite_lesson_id !== undefined) lesson.prerequisite_lesson_id = prerequisite_lesson_id;
 
         await lesson.save();
 
@@ -1287,6 +1381,93 @@ export const deleteLessonResource = async (req: AuthRequest, res: Response): Pro
         });
     } catch (error: any) {
         console.error('Delete Lesson Resource Error:', error);
+        res.status(500).json({
+            status: 'error',
+            message: error.message || 'Internal server error',
+        });
+    }
+};
+
+// ========================================
+// LESSON DISCUSSIONS CONTROLLERS
+// ========================================
+
+export const getLessonDiscussions = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const { lessonId } = req.params;
+
+        const discussions = await LessonDiscussion.findAll({
+            where: { lesson_id: lessonId },
+            include: [
+                {
+                    model: User,
+                    as: 'user',
+                    attributes: ['id', 'first_name', 'last_name', 'avatar', 'role'],
+                }
+            ],
+            order: [['created_at', 'DESC']], // Newest first
+        });
+
+        res.status(200).json({
+            status: 'success',
+            data: discussions,
+        });
+    } catch (error: any) {
+        console.error('Get Lesson Discussions Error:', error);
+        res.status(500).json({
+            status: 'error',
+            message: error.message || 'Internal server error',
+        });
+    }
+};
+
+export const createLessonDiscussion = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const { lessonId } = req.params;
+        const { content } = req.body;
+        const userId = req.userId;
+
+        if (!userId) {
+            res.status(401).json({ status: 'error', message: 'Unauthorized' });
+            return;
+        }
+
+        if (!content || content.trim().length === 0) {
+            res.status(400).json({ status: 'error', message: 'Discussion content is required' });
+            return;
+        }
+
+        // Verify lesson exists
+        const lesson = await Lesson.findByPk(lessonId);
+        if (!lesson) {
+            res.status(404).json({ status: 'error', message: 'Lesson not found' });
+            return;
+        }
+
+        const discussion = await LessonDiscussion.create({
+            lesson_id: parseInt(lessonId),
+            user_id: userId,
+            content: content.trim(),
+        });
+
+        // Refetch to include the associated user details
+        const createdDiscussion = await LessonDiscussion.findByPk(discussion.id, {
+            include: [
+                {
+                    model: User,
+                    as: 'user',
+                    attributes: ['id', 'first_name', 'last_name', 'avatar', 'role'],
+                }
+            ]
+        });
+
+        res.status(201).json({
+            status: 'success',
+            message: 'Discussion posted successfully',
+            data: createdDiscussion,
+        });
+    } catch (error: any) {
+        console.error('Create Lesson Discussion Error:', error);
         res.status(500).json({
             status: 'error',
             message: error.message || 'Internal server error',

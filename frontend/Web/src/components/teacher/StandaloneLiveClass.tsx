@@ -5,7 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { Box, CircularProgress, Typography, Button } from '@mui/material';
 import { Videocam as VideocamIcon } from '@mui/icons-material';
 import { getLiveClassSignature, getJitsiConfig, sendHostHeartbeat, endLiveClassSession } from '@/services/courseService';
-import { getMeetingPlatform } from '@/services/settings';
+import { getMeetingPlatform, getOrgLogoUrl } from '@/services/settings';
+import JitsiMeetingComponent from '@/components/JitsiMeetingComponent';
 
 interface ZoomConfig {
     signature: string;
@@ -22,20 +23,22 @@ interface ZoomConfig {
 interface JitsiMeetingConfig {
     domain: string;
     roomName: string;
-    jwt: string;
-    jitsiEmbedUrl?: string;  // Pre-built URL with JWT + config hash params
+    jwt?: string;
     displayName: string;
     email: string;
     isModerator: boolean;
-    joinUrl: string;
+}
+
+interface StandaloneLiveClassProps {
+    meetingId?: string;
 }
 
 type MeetingPlatform = 'zoom' | 'jitsi';
 
-const StandaloneLiveClass: React.FC = () => {
+const StandaloneLiveClass: React.FC<StandaloneLiveClassProps> = ({ meetingId: propMeetingId }) => {
     const params = useParams();
     const router = useRouter();
-    const meetingId = params?.meetingId as string;
+    const meetingId = propMeetingId || (params?.meetingId as string);
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -43,6 +46,7 @@ const StandaloneLiveClass: React.FC = () => {
     const [zoomConfig, setZoomConfig] = useState<ZoomConfig | null>(null);
     const [jitsiConfig, setJitsiConfig] = useState<JitsiMeetingConfig | null>(null);
     const [jitsiStarted, setJitsiStarted] = useState(false);
+    const [orgLogoUrl, setOrgLogoUrl] = useState<string | undefined>(undefined);
 
     useEffect(() => {
         const initMeeting = async () => {
@@ -53,26 +57,29 @@ const StandaloneLiveClass: React.FC = () => {
             }
 
             try {
-                const activePlatform = await getMeetingPlatform();
+                const [activePlatform, logoUrl] = await Promise.all([getMeetingPlatform(), getOrgLogoUrl()]);
                 setPlatform(activePlatform);
+                setOrgLogoUrl(logoUrl);
 
                 if (activePlatform === 'jitsi') {
                     const jitsiResponse = await getJitsiConfig(meetingId);
                     const jitsiData = jitsiResponse.data;
 
+                    console.log('[JITSI TEACHER] Response data:', jitsiData);
+
                     if (!jitsiData?.domain || !jitsiData?.roomName) {
-                        throw new Error('Failed to get Jitsi meeting details');
+                        throw new Error('Failed to get meeting details');
                     }
+
+                    console.log('[JITSI TEACHER] isModerator from API:', jitsiData.isModerator);
 
                     setJitsiConfig({
                         domain: jitsiData.domain,
                         roomName: jitsiData.roomName,
-                        jwt: jitsiData.jwt || '',
-                        jitsiEmbedUrl: jitsiData.jitsiEmbedUrl,  // Pre-built URL with config hash
+                        jwt: jitsiData.jwt,
                         displayName: jitsiData.displayName || 'User',
                         email: jitsiData.email || '',
                         isModerator: jitsiData.isModerator || false,
-                        joinUrl: jitsiData.joinUrl || `${jitsiData.domain.startsWith('http') ? jitsiData.domain : `https://${jitsiData.domain}`}/${jitsiData.roomName}`,
                     });
                 } else {
                     const response = await getLiveClassSignature(meetingId);
@@ -98,16 +105,19 @@ const StandaloneLiveClass: React.FC = () => {
                 setLoading(false);
             } catch (err: any) {
                 console.error('Failed to get meeting config:', err);
-                const errorMsg = err.response?.data?.message || err.message || 'Failed to start meeting';
-                setError(errorMsg);
+                // 425 = host not in room — show waiting UI instead of generic error
+                if (err?.response?.status === 425) {
+                    setError('The host has not started the meeting yet. Please wait and try again.');
+                } else {
+                    const errorMsg = err.response?.data?.message || err.message || 'Failed to start meeting';
+                    setError(errorMsg);
+                }
                 setLoading(false);
             }
         };
 
         initMeeting();
     }, [meetingId]);
-
-    // ─── Zoom Handlers ────────────────────────────────────────
 
     const handleJoinMeeting = () => {
         if (zoomConfig?.joinUrl && zoomConfig?.password) {
@@ -134,46 +144,17 @@ const StandaloneLiveClass: React.FC = () => {
         }
     };
 
-    // ─── Jitsi Handlers ───────────────────────────────────────
-
     const handleJoinJitsi = () => {
-        if (jitsiConfig) {
-            // Use pre-built URL if available (has config hash), else build manually
-            const baseDomain = jitsiConfig.domain.startsWith('http') ? jitsiConfig.domain : `https://${jitsiConfig.domain}`;
-            const fallback = jitsiConfig.jwt ? `${baseDomain}/${jitsiConfig.roomName}?jwt=${jitsiConfig.jwt}` : `${baseDomain}/${jitsiConfig.roomName}`;
-            const url = jitsiConfig.jitsiEmbedUrl || fallback;
-            window.open(url, '_blank');
-        }
-    };
-
-    const handleEmbedJitsi = () => {
         setJitsiStarted(true);
     };
 
-    // ─── Jitsi Meeting End Handler ────────────────────────────
-    // Listen for Jitsi's postMessage when meeting ends:
-    // 1. Reset host_joined_at so students can no longer join
-    // 2. Navigate back
-    useEffect(() => {
-        if (!jitsiStarted) return;
-        const handleJitsiMessage = (event: MessageEvent) => {
-            try {
-                const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
-                if (
-                    data?.action === 'ready-to-close' ||
-                    data?.action === 'video-conference-left' ||
-                    data?.event === 'VIDEO_CONFERENCE_LEFT' ||
-                    data?.event === 'READY_TO_CLOSE'
-                ) {
-                    endLiveClassSession(meetingId).finally(() => router.back());
-                }
-            } catch { /* ignore non-JSON messages */ }
-        };
-        window.addEventListener('message', handleJitsiMessage);
-        return () => window.removeEventListener('message', handleJitsiMessage);
-    }, [jitsiStarted, meetingId]);
+    const handleSendHeartbeat = () => {
+        sendHostHeartbeat(meetingId).catch(console.error);
+    };
 
-    // ─── Loading State ────────────────────────────────────────
+    const handleJitsiConferenceLeft = () => {
+        endLiveClassSession(meetingId).finally(() => router.replace('/teacher/live-classes'));
+    };
 
     if (loading) {
         return (
@@ -193,8 +174,6 @@ const StandaloneLiveClass: React.FC = () => {
             </Box>
         );
     }
-
-    // ─── Error State ──────────────────────────────────────────
 
     if (error) {
         return (
@@ -217,30 +196,23 @@ const StandaloneLiveClass: React.FC = () => {
         );
     }
 
-    // ─── Jitsi Embedded View ──────────────────────────────────
-
     if (platform === 'jitsi' && jitsiStarted && jitsiConfig) {
-        // Prefer the pre-built URL (includes JWT + toolbar config in hash), fall back to manual
-        const baseDomain = jitsiConfig.domain.startsWith('http') ? jitsiConfig.domain : `https://${jitsiConfig.domain}`;
-        const fallbackUrl = jitsiConfig.jwt
-            ? `${baseDomain}/${jitsiConfig.roomName}?jwt=${jitsiConfig.jwt}`
-            : `${baseDomain}/${jitsiConfig.roomName}`;
-        const jitsiUrl = jitsiConfig.jitsiEmbedUrl || fallbackUrl;
-
         return (
-            <Box sx={{ width: '100vw', height: '100vh', bgcolor: 'black', position: 'relative' }}>
-                <iframe
-                    key={jitsiConfig.roomName}
-                    src={jitsiUrl}
-                    style={{ width: '100%', height: '100%', border: 'none' }}
-                    allow="camera; microphone; fullscreen; display-capture; autoplay; clipboard-write"
-                    title="Jitsi Meeting"
+            <Box sx={{ width: '100vw', height: '100vh', bgcolor: 'black' }}>
+                <JitsiMeetingComponent
+                    domain={jitsiConfig.domain}
+                    roomName={jitsiConfig.roomName}
+                    jwt={jitsiConfig.jwt}
+                    displayName={jitsiConfig.displayName}
+                    email={jitsiConfig.email}
+                    isModerator={jitsiConfig.isModerator}
+                    logoUrl={orgLogoUrl}
+                    sendHeartbeat={handleSendHeartbeat}
+                    onConferenceLeft={handleJitsiConferenceLeft}
                 />
             </Box>
         );
     }
-
-    // ─── Jitsi Ready View ─────────────────────────────────────
 
     if (platform === 'jitsi' && jitsiConfig) {
         return (
@@ -270,7 +242,7 @@ const StandaloneLiveClass: React.FC = () => {
                     <Button
                         variant="contained"
                         size="large"
-                        onClick={handleEmbedJitsi}
+                        onClick={handleJoinJitsi}
                         sx={{
                             py: 2,
                             bgcolor: '#246FE0',
@@ -281,21 +253,6 @@ const StandaloneLiveClass: React.FC = () => {
                     >
                         Join Meeting Here
                     </Button>
-
-                    <Button
-                        variant="outlined"
-                        size="large"
-                        onClick={handleJoinJitsi}
-                        sx={{
-                            py: 2,
-                            color: 'white',
-                            borderColor: '#444',
-                            fontSize: '1rem',
-                            '&:hover': { borderColor: '#666', bgcolor: 'rgba(255,255,255,0.05)' },
-                        }}
-                    >
-                        Open in New Tab
-                    </Button>
                 </Box>
 
                 <Typography variant="caption" sx={{ color: '#555', mt: 4 }}>
@@ -304,8 +261,6 @@ const StandaloneLiveClass: React.FC = () => {
             </Box>
         );
     }
-
-    // ─── Zoom Ready View ──────────────────────────────────────
 
     return (
         <Box sx={{

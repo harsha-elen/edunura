@@ -279,9 +279,9 @@ const Settings: React.FC = () => {
                     );
                 } else if (meetingPlatform === 'jitsi') {
                     savePromises.push(
-                        updateSetting('jitsi_domain', jitsiSettings.domain, 'jitsi', 'Jitsi Domain'),
-                        updateSetting('jitsi_app_id', jitsiSettings.appId, 'jitsi', 'Jitsi App ID'),
-                        updateSetting('jitsi_app_secret', jitsiSettings.appSecret, 'jitsi', 'Jitsi App Secret')
+                        updateSetting('jitsi_domain', jitsiSettings.domain, 'jitsi', 'EduMeet Domain'),
+                        updateSetting('jitsi_app_id', jitsiSettings.appId, 'jitsi', 'EduMeet App ID'),
+                        updateSetting('jitsi_app_secret', jitsiSettings.appSecret, 'jitsi', 'EduMeet App Secret')
                     );
                 }
 
@@ -552,7 +552,7 @@ const Settings: React.FC = () => {
                                                         checked={meetingPlatform === 'jitsi'}
                                                         onChange={() => setMeetingPlatform('jitsi')}
                                                     />
-                                                    <Typography variant="body2" sx={{ fontWeight: 500 }}>Jitsi</Typography>
+                                                    <Typography variant="body2" sx={{ fontWeight: 500 }}>EduMeet</Typography>
                                                 </Box>
                                             </FormControl>
                                         </Box>
@@ -603,20 +603,20 @@ const Settings: React.FC = () => {
                                         {meetingPlatform === 'jitsi' && (
                                             <>
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                                    <Typography variant="body2" sx={{ fontWeight: 500 }}>Jitsi Integration</Typography>
+                                                    <Typography variant="body2" sx={{ fontWeight: 500 }}>EduMeet Integration</Typography>
                                                     <InfoIcon sx={{ fontSize: 16, color: '#94a3b8' }} />
                                                 </Box>
                                                 <Typography variant="caption" sx={{ color: '#64748b', display: 'block', mb: 2 }}>
-                                                    Configure Jitsi Meet for hosting open-source video conferences. Leave settings default for jitsi.org or configure your self-hosted instance.
+                                                    Configure EduMeet for hosting video conferences. Enter your EduMeet server domain and credentials below.
                                                 </Typography>
 
                                                 <TextField
                                                     fullWidth
                                                     size="small"
-                                                    label="Jitsi Domain"
+                                                    label="EduMeet Domain"
                                                     value={jitsiSettings.domain}
                                                     onChange={(e) => setJitsiSettings({ ...jitsiSettings, domain: e.target.value })}
-                                                    placeholder="https://meet.jitsi.org"
+                                                    placeholder="https://meet.example.com"
                                                     sx={{ mb: 2 }}
                                                 />
                                                 <TextField
@@ -625,7 +625,7 @@ const Settings: React.FC = () => {
                                                     label="App ID (Optional)"
                                                     value={jitsiSettings.appId}
                                                     onChange={(e) => setJitsiSettings({ ...jitsiSettings, appId: e.target.value })}
-                                                    placeholder="Leave empty for public jitsi.org"
+                                                    placeholder="Your EduMeet App ID"
                                                     sx={{ mb: 2 }}
                                                 />
                                                 <TextField
@@ -635,7 +635,7 @@ const Settings: React.FC = () => {
                                                     type="password"
                                                     value={jitsiSettings.appSecret}
                                                     onChange={(e) => setJitsiSettings({ ...jitsiSettings, appSecret: e.target.value })}
-                                                    placeholder="Leave empty for public jitsi.org"
+                                                    placeholder="Your EduMeet App Secret"
                                                     sx={{ mb: 3 }}
                                                 />
                                             </>

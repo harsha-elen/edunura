@@ -27,6 +27,9 @@ import {
     uploadLessonVideo,
     uploadLessonResource,
     deleteLessonResource,
+    // Lesson Discussions
+    getLessonDiscussions,
+    createLessonDiscussion,
 } from './controller';
 import { authenticate, authorize } from '../../middleware/auth';
 import { uploadCourseAsset } from '../../middleware/upload';
@@ -133,5 +136,11 @@ router.delete(
     authorize('admin', 'teacher'),
     deleteLessonResource
 );
+
+// ========================================
+// LESSON DISCUSSIONS ROUTES
+// ========================================
+router.get('/lessons/:lessonId/discussions', authenticate, getLessonDiscussions);
+router.post('/lessons/:lessonId/discussions', authenticate, createLessonDiscussion);
 
 export default router;

@@ -1,30 +1,25 @@
 ##############################################################################
-# LMS — Docker Compose for Dokploy
+# LMS — Docker Compose for Dokploy (Unified Next.js Frontend)
 #
-# KEY DIFFERENCES vs docker-compose.yml:
+# KEY DIFFERENCES:
 #   • No nginx proxy / certbot — Dokploy's Traefik handles routing + SSL
 #   • All public services join "dokploy-network" so Traefik can reach them
 #   • Domains are configured in the Dokploy UI (Domains tab), NOT hardcoded
-#   • Internal services (db) stay on lms_internal only (not exposed)
-#   • Build args are interpolated from env vars set in the Dokploy UI
 #
 # SETUP IN DOKPLOY UI:
 #   1. Create a new "Docker Compose" project
 #   2. Connect your Git repo, set compose file to: docker-compose.dokploy.yml
 #   3. Go to "Environment" tab → paste the filled-in contents of .env.docker.example
-#      (fill BACKEND_URL, passwords, secrets, AWS, email before pasting)
 #   4. Deploy
-#   5. Go to "Domains" tab → add a domain for each service (see ports below):
-#       landing    → yourdomain.com                   (port 3000)
-#       backend    → BACKEND_URL           (port 5000)
-#       student    → app.yourdomain.com               (port 80)
-#       teacher    → teacher.yourdomain.com           (port 80)
-#       admin      → admin.yourdomain.com             (port 80)
+#   5. Go to "Domains" tab → add your domains:
+#       backend    → api.clientdomain.com             (port 5000)
+#       web-app    → clientdomain.com (or app.*)      (port 3000)
 ##############################################################################
 
 services:
 
   # ─── Database (internal only) ─────────────────────────────────────────────
+  # Volume db_data persists all MySQL data across redeploys — never deleted
   db:
     image: mysql:8.0
     container_name: lms_db
@@ -46,7 +41,8 @@ services:
       - lms_internal
 
   # ─── Backend API ───────────────────────────────────────────────────────────
-  # Domain in Dokploy UI: api.yourdomain.com → port 5000
+  # Domain in Dokploy UI: api.edunura.com → port 5000
+  # Volume uploads_data persists course videos, thumbnails, avatars across redeploys
   backend:
     image: harshath/lms-backend:latest
     container_name: lms_backend
@@ -54,111 +50,103 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV}
       PORT: ${PORT}
+
+      # Admin seed credentials (only used on first boot if no admin exists)
       ADMIN_EMAIL: ${ADMIN_EMAIL}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+
+      # Database
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT}
       DB_NAME: ${DB_NAME}
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
+
+      # JWT
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
       JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN}
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
-      AWS_REGION: ${AWS_REGION}
-      AWS_S3_BUCKET: ${AWS_S3_BUCKET}
+
+      # Jitsi Live Classes
+      JITSI_DOMAIN: ${JITSI_DOMAIN}
+      JITSI_APP_ID: ${JITSI_APP_ID}
+      JITSI_APP_SECRET: ${JITSI_APP_SECRET}
+
+      # Backend public URL — used in Jitsi dynamic branding endpoint to build logo URLs
+      BACKEND_URL: ${BACKEND_URL}
+
+      # Email (SendGrid)
       EMAIL_SERVICE: ${EMAIL_SERVICE}
       EMAIL_FROM: ${EMAIL_FROM}
       SENDGRID_API_KEY: ${SENDGRID_API_KEY}
-      STUDENT_URL: ${STUDENT_URL}
-      ADMIN_URL: ${ADMIN_URL}
-      TEACHER_URL: ${TEACHER_URL}
-      LANDING_URL: ${LANDING_URL}
+
+      # CORS — allow only the production frontend
+      FRONTEND_URL: ${FRONTEND_URL}
+
+      # File Upload limits
       MAX_FILE_SIZE: ${MAX_FILE_SIZE}
       ALLOWED_FILE_TYPES: ${ALLOWED_FILE_TYPES}
+
+      # AWS S3 (optional — for future file storage migration)
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_REGION: ${AWS_REGION:-}
+      AWS_S3_BUCKET: ${AWS_S3_BUCKET:-}
     depends_on:
       db:
         condition: service_healthy
     volumes:
+      # Named volume — survives container replacement, image updates, redeploys
       - uploads_data:/app/uploads
     expose:
       - "5000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     networks:
       - lms_internal
       - dokploy-network
 
-  # ─── Landing Site (Next.js) ───────────────────────────────────────────────
-  # Domain in Dokploy UI: yourdomain.com → port 3000
-  landing:
-    image: harshath/lms-landing:latest
-    container_name: lms_landing
+  # ─── Unified Frontend (Next.js 16 — all 4 portals consolidated) ───────────
+  # Domain in Dokploy UI: edunura.com (or app.edunura.com) → port 3000
+  # Portals: /admin /teacher /student /landing /meeting /checkout /course
+  web-app:
+    image: harshath/lms-web:latest
+    container_name: lms_web
     restart: unless-stopped
-    environment:
-      NEXT_PUBLIC_API_URL: ${BACKEND_URL}/api
-      NEXT_PUBLIC_STUDENT_APP_URL: ${STUDENT_APP_URL}
+    depends_on:
+      backend:
+        condition: service_healthy
     expose:
       - "3000"
-    networks:
-      - dokploy-network
-
-  # ─── Admin Portal ─────────────────────────────────────────────────────────
-  # Domain in Dokploy UI: admin.yourdomain.com → port 80
-  admin-app:
-    image: harshath/lms-admin:latest
-    container_name: lms_admin
-    restart: unless-stopped
-    environment:
-      VITE_API_BASE_URL: ${BACKEND_URL}/api
-    expose:
-      - "80"
-    networks:
-      - dokploy-network
-
-  # ─── Teacher Portal ───────────────────────────────────────────────────────
-  # Domain in Dokploy UI: teacher.yourdomain.com → port 80
-  teacher-app:
-    image: harshath/lms-teacher:latest
-    container_name: lms_teacher
-    restart: unless-stopped
-    environment:
-      VITE_API_BASE_URL: ${BACKEND_URL}/api
-    expose:
-      - "80"
-    networks:
-      - dokploy-network
-
-  # ─── Student Portal ───────────────────────────────────────────────────────
-  # SUBDOMAIN mode (default):  STUDENT_TAG=latest   → image built with VITE_BASE_PATH=/
-  #   → Dokploy domain: app.yourdomain.com → port 80
-  #
-  # PATH mode:                 STUDENT_TAG=pathmode  → image built with VITE_BASE_PATH=/app
-  #   → Dokploy domain: yourdomain.com → port 80, Traefik PathPrefix: /app
-  student-app:
-    image: harshath/lms-student:${STUDENT_TAG:-latest}
-    container_name: lms_student
-    restart: unless-stopped
-    environment:
-      VITE_API_BASE_URL: ${BACKEND_URL}/api
-    expose:
-      - "80"
+    healthcheck:
+      test: ["CMD", "node", "-e", "const net=require('net');const s=net.connect(3000,'127.0.0.1',()=>{s.destroy();process.exit(0)});s.on('error',()=>process.exit(1));setTimeout(()=>process.exit(1),5000)"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     networks:
       - dokploy-network
 
 # ─── Volumes ───────────────────────────────────────────────────────────────
+# Named volumes are managed by Docker — NOT deleted on redeploy or image update.
+# Only deleted explicitly with: docker volume rm <name>
 volumes:
-  db_data:
+  db_data:       # MySQL data files — all course, user, payment records
     driver: local
-  uploads_data:
+  uploads_data:  # Uploaded files — course videos, thumbnails, avatars, PDFs
     driver: local
 
 # ─── Networks ──────────────────────────────────────────────────────────────
 networks:
-  # Internal network — db never touches the internet
+  # Internal network — db is never exposed to the internet
   lms_internal:
     driver: bridge
 
-  # Dokploy's Traefik network — must be declared as external
+  # Dokploy's Traefik reverse-proxy network — required for domain routing
   dokploy-network:
     external: true

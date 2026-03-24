@@ -53,8 +53,10 @@ import {
     Cancel as CancelIcon,
     ViewList as ViewListIcon,
     ViewModule as ViewModuleIcon,
+    FileDownload as FileDownloadIcon,
 } from '@mui/icons-material';
 import { getAllStudents, createStudent, updateStudent, deleteStudent, Student, CreateStudentPayload, UpdateStudentPayload } from '@/services/students';
+import { downloadCSV } from '@/utils/csvExport';
 
 const Students: React.FC = () => {
     const theme = useTheme();
@@ -210,6 +212,18 @@ const Students: React.FC = () => {
 
     const getAvatarInitials = (firstName: string, lastName: string) => `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
 
+    const handleExportCSV = () => {
+        const exportData = filteredStudents.map(s => ({
+            'First Name': s.first_name,
+            'Last Name': s.last_name,
+            'Email': s.email,
+            'Phone': s.phone || '',
+            'Status': s.is_active ? 'Active' : 'Inactive',
+            'Joined Date': new Date(s.created_at).toLocaleDateString()
+        }));
+        downloadCSV(exportData, 'students_export');
+    };
+
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4, width: '100%' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 2 }}>
@@ -221,9 +235,14 @@ const Students: React.FC = () => {
                     <Typography variant="h5" sx={{ fontWeight: 700, color: '#0d141b' }}>Students Management</Typography>
                     <Typography variant="body2" sx={{ color: '#4c739a', mt: 1 }}>Manage and oversee all students on your platform</Typography>
                 </Box>
-                <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpenDialog()} sx={{ bgcolor: theme.palette.primary.main, color: 'white', textTransform: 'none', fontWeight: 600, px: 3, '&:hover': { bgcolor: theme.palette.primary.dark || '#1e40af' } }}>
-                    Add Student
-                </Button>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                    <Button variant="outlined" startIcon={<FileDownloadIcon />} onClick={handleExportCSV} sx={{ textTransform: 'none', fontWeight: 600 }}>
+                        Export CSV
+                    </Button>
+                    <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpenDialog()} sx={{ bgcolor: theme.palette.primary.main, color: 'white', textTransform: 'none', fontWeight: 600, px: 3, '&:hover': { bgcolor: theme.palette.primary.dark || '#1e40af' } }}>
+                        Add Student
+                    </Button>
+                </Box>
             </Box>
 
             <Grid container spacing={3}>

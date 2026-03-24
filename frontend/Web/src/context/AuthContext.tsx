@@ -74,25 +74,35 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         try {
             const savedToken = localStorage.getItem('token');
             const savedUser = localStorage.getItem('user');
+            console.log('[AuthContext] Initializing auth state...');
+            console.log('[AuthContext] Saved token exists:', !!savedToken);
+            console.log('[AuthContext] Saved user exists:', !!savedUser);
+            
             if (savedToken && savedUser) {
                 setToken(savedToken);
                 setUser(JSON.parse(savedUser));
+                console.log('[AuthContext] Auth state restored from localStorage');
+            } else {
+                console.log('[AuthContext] No saved auth state found');
             }
         } catch (error) {
-            console.error('Failed to load auth state:', error);
+            console.error('[AuthContext] Failed to load auth state:', error);
             localStorage.removeItem('token');
             localStorage.removeItem('user');
+            console.log('[AuthContext] Corrupted auth data cleared');
         }
         setIsLoading(false);
     }, []);
 
     const login = useCallback((newToken: string, newUser: User, newRefreshToken?: string, redirectTo?: string) => {
+        console.log('[AuthContext] Login called for user:', newUser.email);
         setToken(newToken);
         setUser(newUser);
         localStorage.setItem('token', newToken);
         localStorage.setItem('user', JSON.stringify(newUser));
         if (newRefreshToken) {
             localStorage.setItem('refreshToken', newRefreshToken);
+            console.log('[AuthContext] Refresh token saved');
         }
 
         // Redirect to the appropriate dashboard
@@ -100,15 +110,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const safeRedirect = redirectTo && redirectTo.startsWith('/') && !redirectTo.startsWith('//')
             ? redirectTo
             : dashboardPath;
+
+        console.log('[AuthContext] Redirecting to:', safeRedirect);
         router.push(safeRedirect);
     }, [router]);
 
     const logout = useCallback(() => {
+        console.log('[AuthContext] Logout called');
         setToken(null);
         setUser(null);
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         localStorage.removeItem('refreshToken');
+        console.log('[AuthContext] Auth data cleared, redirecting to login');
         router.push('/login');
     }, [router]);
 

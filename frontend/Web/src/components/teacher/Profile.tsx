@@ -26,7 +26,7 @@ import {
 } from '@mui/icons-material';
 import { getProfile, updateProfile, changePassword, uploadAvatar, ProfileData } from '@/services/profileService';
 import { STATIC_ASSETS_BASE_URL } from '@/services/apiClient';
-
+import TwoFactorSetup from '@/components/TwoFactorSetup';
 
 const TeacherProfile: React.FC = () => {
     const theme = useTheme();
@@ -661,40 +661,7 @@ const TeacherProfile: React.FC = () => {
                             </Box>
 
                             {/* Two-Factor Authentication */}
-                            <Box
-                                sx={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'space-between',
-                                    p: 2,
-                                    bgcolor: '#f6f7f8',
-                                    borderRadius: 2,
-                                }}
-                            >
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                    <Box
-                                        sx={{
-                                            p: 1,
-                                            bgcolor: 'rgba(7, 136, 56, 0.1)',
-                                            color: '#078838',
-                                            borderRadius: 2,
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                        }}
-                                    >
-                                        <ShieldIcon fontSize="small" />
-                                    </Box>
-                                    <Box>
-                                        <Box sx={{ fontSize: '0.875rem', fontWeight: 700, color: '#0d141b' }}>
-                                            Two-Factor Authentication
-                                        </Box>
-                                        <Box sx={{ fontSize: '0.75rem', color: '#4c739a' }}>
-                                            Recommended for enhanced security
-                                        </Box>
-                                    </Box>
-                                </Box>
-                            </Box>
+                            <TwoFactorSetup is2FAEnabled={profileData.is_two_factor_enabled || false} onStatusChange={(enabled) => setProfileData({ ...profileData, is_two_factor_enabled: enabled })} />
                         </Box>
                     </Box>
                 </Box>

@@ -46,6 +46,7 @@ export const getProfile = async (req: AuthRequest, res: Response): Promise<void>
                 billing_country: userData.billing_country,
                 created_at: userData.created_at,
                 last_login: userData.last_login,
+                is_two_factor_enabled: userData.is_two_factor_enabled,
             },
         });
     } catch (error: any) {

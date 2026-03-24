@@ -49,6 +49,8 @@ export interface Lesson {
     start_time?: string;
     created_at?: string;
     updated_at?: string;
+    is_locked?: boolean;
+    lock_reason?: string;
 }
 
 export interface CreateLessonData {
@@ -65,6 +67,24 @@ export interface CreateLessonData {
     duration?: number;
     is_free_preview?: boolean;
     is_published?: boolean;
+    release_date?: string | null;
+    drip_days?: number | null;
+    prerequisite_lesson_id?: number | null;
+}
+
+export interface LessonDiscussion {
+    id: number;
+    lesson_id: number;
+    user_id: number;
+    content: string;
+    created_at: string;
+    user?: {
+        id: number;
+        first_name: string;
+        last_name: string;
+        avatar: string;
+        role: string;
+    };
 }
 
 // ─── Course CRUD ──────────────────────────────────────────────
@@ -211,6 +231,18 @@ export const endLiveClassSession = async (sessionId: string | number): Promise<v
     try {
         await apiClient.post(`/live-classes/${sessionId}/end-session`);
     } catch { /* best-effort */ }
+};
+
+// ─── Lesson Discussions ──────────────────────────────────────────
+
+export const getLessonDiscussions = async (lessonId: number) => {
+    const response = await apiClient.get(`/courses/lessons/${lessonId}/discussions`);
+    return response.data;
+};
+
+export const createLessonDiscussion = async (lessonId: number, content: string) => {
+    const response = await apiClient.post(`/courses/lessons/${lessonId}/discussions`, { content });
+    return response.data;
 };
 
 // ─── Student Progress ─────────────────────────────────────────

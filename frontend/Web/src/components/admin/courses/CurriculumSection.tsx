@@ -31,6 +31,7 @@ import {
     VideocamOutlined as VideocamIcon,
     AddCircle as AddCircleIcon,
     AddBox as AddBoxIcon,
+    LockClock as LockClockIcon,
 } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
 import { ReactSortable } from 'react-sortablejs';
@@ -52,6 +53,7 @@ import {
     deleteLessonResource,
     createCourse,
 } from '@/services/courseService';
+import DripSettingsModal from './DripSettingsModal';
 import type { Section, Lesson as APILesson, LessonResource } from '@/services/courseService';
 
 interface Lesson {
@@ -71,6 +73,9 @@ interface Lesson {
     content_platform?: 'zoom' | 'jitsi';
     jitsi_room_name?: string;
     jitsi_join_url?: string;
+    release_date?: string | null;
+    drip_days?: number | null;
+    prerequisite_lesson_id?: number | null;
 }
 
 interface Module {
@@ -103,6 +108,7 @@ const CurriculumSection: React.FC<CurriculumSectionProps> = ({ courseId, onCours
     const [deleteModuleDialog, setDeleteModuleDialog] = useState<{ open: boolean; moduleId: number | null }>({ open: false, moduleId: null });
     const [deleteLessonDialog, setDeleteLessonDialog] = useState<{ open: boolean; lessonId: number | null; moduleId: number | null }>({ open: false, lessonId: null, moduleId: null });
     const [editModuleDialog, setEditModuleDialog] = useState<{ open: boolean; moduleId: number | null; currentTitle: string }>({ open: false, moduleId: null, currentTitle: '' });
+    const [dripModalDialog, setDripModalDialog] = useState<{ open: boolean; lessonId: number | null }>({ open: false, lessonId: null });
     const [editModuleTitle, setEditModuleTitle] = useState('');
 
     const modulesRef = useRef<Module[]>(modules);
@@ -152,6 +158,9 @@ const CurriculumSection: React.FC<CurriculumSectionProps> = ({ courseId, onCours
                             content_platform: lesson.content_platform,
                             jitsi_room_name: lesson.jitsi_room_name,
                             jitsi_join_url: lesson.jitsi_join_url,
+                            release_date: lesson.release_date || null,
+                            drip_days: lesson.drip_days !== undefined ? lesson.drip_days : null,
+                            prerequisite_lesson_id: lesson.prerequisite_lesson_id || null,
                         }));
                         return {
                             id: section.id,
@@ -463,6 +472,19 @@ const CurriculumSection: React.FC<CurriculumSectionProps> = ({ courseId, onCours
         }
     };
 
+    const handleSaveDripSettings = async (lessonId: number, dripData: { release_date: string | null; drip_days: number | null; prerequisite_lesson_id: number | null }) => {
+        try {
+            await updateLesson(lessonId, dripData);
+            setModules(modules.map(mod => ({
+                ...mod,
+                lessons: mod.lessons.map(l => l.id === lessonId ? { ...l, ...dripData } : l)
+            })));
+            showSnackbar('Drip settings saved', 'success');
+        } catch (err: any) {
+            showSnackbar(err.response?.data?.message || 'Failed to save drip settings', 'error');
+        }
+    };
+
     const getIcon = (type: Lesson['type']) => {
         switch (type) {
             case 'video': return <PlayCircleIcon sx={{ color: '#2b8cee' }} />;
@@ -584,6 +606,11 @@ const CurriculumSection: React.FC<CurriculumSectionProps> = ({ courseId, onCours
                                                                         </Button>
                                                                     )}
                                                                     <IconButton size="small" disabled={isLessonCompleted(lesson)}
+                                                                        sx={{ color: '#64748b', '&:hover': { color: '#8B5CF6' }, '&:disabled': { color: '#cbd5e1' } }}
+                                                                        onClick={() => setDripModalDialog({ open: true, lessonId: lesson.id })}>
+                                                                        <LockClockIcon sx={{ fontSize: 18, color: (lesson.release_date || lesson.drip_days || lesson.prerequisite_lesson_id) ? '#8B5CF6' : 'inherit' }} />
+                                                                    </IconButton>
+                                                                    <IconButton size="small" disabled={isLessonCompleted(lesson)}
                                                                         sx={{ color: '#64748b', '&:hover': { color: theme.palette.primary.main }, '&:disabled': { color: '#cbd5e1' } }}
                                                                         onClick={() => { setEditingLesson(lesson); setIsAddLessonOpen(true); }}>
                                                                         <EditIcon sx={{ fontSize: 18 }} />
@@ -684,6 +711,13 @@ const CurriculumSection: React.FC<CurriculumSectionProps> = ({ courseId, onCours
             <Snackbar open={snackbar.open} autoHideDuration={4000} onClose={() => setSnackbar({ ...snackbar, open: false })} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
                 <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} sx={{ width: '100%' }}>{snackbar.message}</Alert>
             </Snackbar>
+            <DripSettingsModal
+                open={dripModalDialog.open}
+                onClose={() => setDripModalDialog({ open: false, lessonId: null })}
+                lesson={modules.flatMap(m => m.lessons).find(l => l.id === dripModalDialog.lessonId) || null}
+                allLessons={modules.flatMap(m => m.lessons)}
+                onSave={handleSaveDripSettings}
+            />
         </Box>
     );
 };

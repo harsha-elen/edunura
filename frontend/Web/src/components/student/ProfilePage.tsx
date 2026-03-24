@@ -45,6 +45,7 @@ import DownloadIcon from '@mui/icons-material/Download';
 import WalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
+import TwoFactorSetup from '@/components/TwoFactorSetup';
 
 
 // ── Country data ────────────────────────────────────────────────────────────
@@ -672,6 +673,8 @@ export default function ProfilePage() {
                                     </Grid>
                                 </Grid>
                             </Box>
+                            <Divider sx={{ my: 1 }} />
+                            <TwoFactorSetup is2FAEnabled={profileData?.is_two_factor_enabled || false} onStatusChange={(enabled) => setProfileData({ ...profileData, is_two_factor_enabled: enabled })} />
                         </Card>
                     </Box>
 

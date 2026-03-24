@@ -9,6 +9,7 @@ import { LessonResource } from './LessonResource';
 import Enrollment from './Enrollment';
 import LessonProgress from './LessonProgress';
 import Payment from './Payment';
+import LessonDiscussion from './LessonDiscussion';
 
 // Define associations
 export const initializeAssociations = () => {
@@ -132,6 +133,28 @@ export const initializeAssociations = () => {
         foreignKey: 'user_id',
         as: 'user',
     });
+
+    // Lesson - LessonDiscussion relationship
+    Lesson.hasMany(LessonDiscussion, {
+        foreignKey: 'lesson_id',
+        as: 'discussions',
+    });
+
+    LessonDiscussion.belongsTo(Lesson, {
+        foreignKey: 'lesson_id',
+        as: 'lesson',
+    });
+
+    // User - LessonDiscussion relationship
+    User.hasMany(LessonDiscussion, {
+        foreignKey: 'user_id',
+        as: 'discussions',
+    });
+
+    LessonDiscussion.belongsTo(User, {
+        foreignKey: 'user_id',
+        as: 'user',
+    });
 };
 
 export {
@@ -146,4 +169,5 @@ export {
     Enrollment,
     LessonProgress,
     Payment,
+    LessonDiscussion,
 };

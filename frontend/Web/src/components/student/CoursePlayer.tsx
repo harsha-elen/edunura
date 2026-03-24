@@ -42,6 +42,8 @@ import {
     Videocam as VideoCallIcon,
 } from '@mui/icons-material';
 import VideoPlayer from '@/components/VideoPlayer';
+import JitsiMeetingComponent from '@/components/JitsiMeetingComponent';
+import { getOrgLogoUrl } from '@/services/settings';
 import {
     getCourseWithCurriculum,
     getCourseProgress,
@@ -56,6 +58,7 @@ import {
     Lesson,
     LessonResource,
 } from '@/services/courseService';
+import LessonDiscussion from './LessonDiscussion';
 
 // ─── Helper Functions ─────────────────────────────────────────
 
@@ -123,6 +126,14 @@ export default function CoursePlayer() {
     const [expandedModules, setExpandedModules] = useState<number[]>([]);
     const [completingLesson, setCompletingLesson] = useState<number | null>(null);
     const [jitsiEmbedUrl, setJitsiEmbedUrl] = useState<string | null>(null);
+    const [jitsiConfig, setJitsiConfig] = useState<{
+        domain: string;
+        roomName: string;
+        jwt?: string;
+        displayName: string;
+        isModerator: boolean;
+    } | null>(null);
+    const [orgLogoUrl, setOrgLogoUrl] = useState<string | undefined>(undefined);
     const [jitsiLoading, setJitsiLoading] = useState(false);
     // null = not yet checked, false = host not in yet, true = host joined
     const [hostJoined, setHostJoined] = useState<boolean | null>(null);
@@ -474,17 +485,34 @@ export default function CoursePlayer() {
                         position: 'relative',
                         overflow: 'hidden',
                     }}>
-                        {currentLesson?.content_type === 'live' ? (
+                        {currentLesson?.is_locked ? (
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 500, bgcolor: '#1a1a1a', flexDirection: 'column', p: 4 }}>
+                                <LockIcon sx={{ fontSize: 80, color: '#94a3b8', mb: 2 }} />
+                                <Typography variant="h5" sx={{ color: '#fff', fontWeight: 700, mb: 1 }}>Content Locked</Typography>
+                                <Typography sx={{ color: 'rgba(255,255,255,0.7)', textAlign: 'center', maxWidth: 400 }}>
+                                    {currentLesson.lock_reason || 'This lesson is currently locked.'}
+                                </Typography>
+                            </Box>
+                        ) : currentLesson?.content_type === 'live' ? (
                             currentLesson?.content_platform === 'jitsi' ? (
-                                jitsiEmbedUrl ? (
-                                    /* ── Embedded Jitsi Meeting (same as teacher/admin) ── */
+                                jitsiConfig ? (
+                                    /* ── Embedded Jitsi Meeting using SDK ── */
                                     <Box sx={{ width: '100%', minHeight: 500, position: 'relative', bgcolor: '#000' }}>
-                                        <iframe
-                                            key={jitsiEmbedUrl}
-                                            src={jitsiEmbedUrl}
-                                            style={{ width: '100%', height: '100%', minHeight: 500, border: 'none' }}
-                                            allow="camera; microphone; fullscreen; display-capture; autoplay; clipboard-write"
-                                            title="Jitsi Meeting"
+                                        <JitsiMeetingComponent
+                                            domain={jitsiConfig.domain}
+                                            roomName={jitsiConfig.roomName}
+                                            jwt={jitsiConfig.jwt}
+                                            displayName={jitsiConfig.displayName}
+                                            email=""
+                                            isModerator={jitsiConfig.isModerator}
+                                            logoUrl={orgLogoUrl}
+                                            onConferenceLeft={() => {
+                                                // Immediately mark host as gone so join button
+                                                // is disabled — prevents rejoining an empty room
+                                                // before the 8s poll catches up.
+                                                setHostJoined(false);
+                                                setJitsiConfig(null);
+                                            }}
                                         />
                                     </Box>
                                 ) : currentLesson?.jitsi_join_url ? (
@@ -536,20 +564,31 @@ export default function CoursePlayer() {
                                                 if (!currentLesson?.jitsi_room_name && !currentLesson?.jitsi_join_url) return;
                                                 try {
                                                     setJitsiLoading(true);
-                                                    const res = await getJitsiConfig(currentLesson.jitsi_room_name || currentLesson.id);
-                                                    const { domain, roomName, jwt, jitsiEmbedUrl } = res.data;
-                                                    // Prefer pre-built URL (includes JWT + toolbar config in hash)
-                                                    let url: string;
-                                                    if (jitsiEmbedUrl) {
-                                                        url = jitsiEmbedUrl;
-                                                    } else {
-                                                        const baseDomain = domain.startsWith('http') ? domain : `https://${domain}`;
-                                                        url = jwt ? `${baseDomain}/${roomName}?jwt=${jwt}` : `${baseDomain}/${roomName}`;
-                                                    }
-                                                    setJitsiEmbedUrl(url);
-                                                } catch (err) {
+                                                    const [res, logoUrl] = await Promise.all([
+                                                        getJitsiConfig(currentLesson.jitsi_room_name || currentLesson.id),
+                                                        getOrgLogoUrl(),
+                                                    ]);
+                                                    const { domain, roomName, jwt, displayName, isModerator } = res.data;
+                                                    console.log('[STUDENT JITSI] API response:', { domain, roomName, hasJwt: !!jwt, displayName, isModerator });
+                                                    console.log('[STUDENT JITSI] Full response data:', JSON.stringify(res.data, null, 2));
+                                                    setOrgLogoUrl(logoUrl);
+                                                    setJitsiConfig({
+                                                        domain,
+                                                        roomName,
+                                                        jwt,
+                                                        displayName: displayName || 'Student',
+                                                        isModerator: isModerator || false,
+                                                    });
+                                                    setJitsiEmbedUrl(`${domain}/${roomName}`);
+                                                } catch (err: any) {
                                                     console.error('Failed to get Jitsi config:', err);
-                                                    setSnackbar({ open: true, message: 'Failed to join meeting. Please try again.', severity: 'error' });
+                                                    // 425 = host not in room yet — reset to waiting state instead of error
+                                                    if (err?.response?.status === 425) {
+                                                        setHostJoined(false);
+                                                        setSnackbar({ open: true, message: 'The host has left the meeting. Waiting for them to rejoin.', severity: 'error' });
+                                                    } else {
+                                                        setSnackbar({ open: true, message: 'Failed to join meeting. Please try again.', severity: 'error' });
+                                                    }
                                                 } finally {
                                                     setJitsiLoading(false);
                                                 }
@@ -730,7 +769,7 @@ export default function CoursePlayer() {
                             </Box>
 
                             {/* Mark Complete Button */}
-                            {currentLesson && (
+                            {currentLesson && !currentLesson.is_locked && (
                                 <Box sx={{ mb: 4 }}>
                                     <Button
                                         variant={isCurrentCompleted ? 'outlined' : 'contained'}
@@ -761,156 +800,158 @@ export default function CoursePlayer() {
                             )}
 
                             {/* Tabs: Overview / Resources / Discussion */}
-                            <Box sx={{ borderBottom: `1px solid ${theme.palette.divider}`, mb: 4, overflowX: 'auto' }}>
-                                <Box sx={{ display: 'flex', gap: 4 }}>
-                                    {['Overview', 'Resources', 'Discussion'].map((tab, index) => (
-                                        <Button
-                                            key={tab}
-                                            onClick={() => setActiveTab(index)}
-                                            sx={{
-                                                pb: 2,
-                                                px: 1,
-                                                minWidth: 0,
-                                                borderRadius: 0,
-                                                borderBottom: 2,
-                                                borderColor: activeTab === index ? theme.palette.primary.main : 'transparent',
-                                                color: activeTab === index ? theme.palette.primary.main : theme.palette.text.secondary,
-                                                fontWeight: activeTab === index ? 600 : 500,
-                                                fontSize: '14px',
-                                                textTransform: 'none',
-                                                '&:hover': { color: activeTab === index ? theme.palette.primary.main : theme.palette.text.primary },
-                                            }}
-                                        >
-                                            {tab}
-                                        </Button>
-                                    ))}
-                                </Box>
-                            </Box>
-
-                            {/* Tab Content: Overview */}
-                            {activeTab === 0 && (
-                                <Grid container spacing={6}>
-                                    <Grid size={{ xs: 12, xl: 8 }}>
-                                        <Box sx={{
-                                            fontSize: '1.125rem',
-                                            lineHeight: 1.75,
-                                            color: theme.palette.text.secondary,
-                                            '& img': { maxWidth: '100%', borderRadius: 2 },
-                                            '& a': { color: theme.palette.primary.main },
-                                            '& h1, & h2, & h3, & h4': { color: theme.palette.text.primary },
-                                        }}>
-                                            <div
-                                                dangerouslySetInnerHTML={{
-                                                    __html: DOMPurify.sanitize(currentLesson?.content_body || 'No content available for this lesson.')
-                                                }}
-                                            />
+                            {!currentLesson?.is_locked && (
+                                <>
+                                    <Box sx={{ borderBottom: `1px solid ${theme.palette.divider}`, mb: 4, overflowX: 'auto' }}>
+                                        <Box sx={{ display: 'flex', gap: 4 }}>
+                                            {['Overview', 'Resources', 'Discussion'].map((tab, index) => (
+                                                <Button
+                                                    key={tab}
+                                                    onClick={() => setActiveTab(index)}
+                                                    sx={{
+                                                        pb: 2,
+                                                        px: 1,
+                                                        minWidth: 0,
+                                                        borderRadius: 0,
+                                                        borderBottom: 2,
+                                                        borderColor: activeTab === index ? theme.palette.primary.main : 'transparent',
+                                                        color: activeTab === index ? theme.palette.primary.main : theme.palette.text.secondary,
+                                                        fontWeight: activeTab === index ? 600 : 500,
+                                                        fontSize: '14px',
+                                                        textTransform: 'none',
+                                                        '&:hover': { color: activeTab === index ? theme.palette.primary.main : theme.palette.text.primary },
+                                                    }}
+                                                >
+                                                    {tab}
+                                                </Button>
+                                            ))}
                                         </Box>
-                                    </Grid>
-                                </Grid>
-                            )}
+                                    </Box>
 
-                            {/* Tab Content: Resources */}
-                            {activeTab === 1 && (
-                                <Grid container spacing={6}>
-                                    <Grid size={{ xs: 12, xl: 8 }}>
-                                        <Box sx={{ bgcolor: theme.palette.action.hover, p: 3, borderRadius: 3, border: `1px solid ${theme.palette.divider}` }}>
-                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                                                <Typography variant="subtitle1" sx={{ fontWeight: 700, color: theme.palette.text.primary }}>
-                                                    Lesson Resources
-                                                </Typography>
-                                                {currentLesson?.resources && currentLesson.resources.length > 1 && (
-                                                    <Button
-                                                        size="small"
-                                                        variant="contained"
-                                                        startIcon={<DownloadIcon />}
-                                                        sx={{ textTransform: 'none', fontWeight: 600, bgcolor: theme.palette.primary.main, '&:hover': { bgcolor: theme.palette.primary.dark } }}
-                                                        onClick={() => {
-                                                            currentLesson?.resources?.forEach((resource) => {
-                                                                const link = document.createElement('a');
-                                                                link.href = getResourceUrl(resource.file_path);
-                                                                link.download = resource.title;
-                                                                link.target = '_blank';
-                                                                link.click();
-                                                            });
+                                    {/* Tab Content: Overview */}
+                                    {activeTab === 0 && (
+                                        <Grid container spacing={6}>
+                                            <Grid size={{ xs: 12, xl: 8 }}>
+                                                <Box sx={{
+                                                    fontSize: '1.125rem',
+                                                    lineHeight: 1.75,
+                                                    color: theme.palette.text.secondary,
+                                                    '& img': { maxWidth: '100%', borderRadius: 2 },
+                                                    '& a': { color: theme.palette.primary.main },
+                                                    '& h1, & h2, & h3, & h4': { color: theme.palette.text.primary },
+                                                }}>
+                                                    <div
+                                                        dangerouslySetInnerHTML={{
+                                                            __html: DOMPurify.sanitize(currentLesson?.content_body || 'No content available for this lesson.')
                                                         }}
-                                                    >
-                                                        Download All
-                                                    </Button>
-                                                )}
-                                            </Box>
-                                            {currentLesson?.resources && currentLesson.resources.length > 0 ? (
-                                                <Grid container spacing={2}>
-                                                    {currentLesson.resources.map((resource) => (
-                                                        <Grid size={{ xs: 12, sm: 6 }} key={resource.id}>
-                                                            <Box
-                                                                component="a"
-                                                                href={getResourceUrl(resource.file_path)}
-                                                                download
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                sx={{
-                                                                    p: 2,
-                                                                    bgcolor: theme.palette.background.paper,
-                                                                    borderRadius: 2,
-                                                                    border: `1px solid ${theme.palette.action.hover}`,
-                                                                    textDecoration: 'none',
-                                                                    cursor: 'pointer',
-                                                                    transition: 'all 0.2s ease',
-                                                                    display: 'flex',
-                                                                    justifyContent: 'space-between',
-                                                                    alignItems: 'center',
-                                                                    height: '100%',
-                                                                    '&:hover': { borderColor: theme.palette.primary.main, bgcolor: alpha(theme.palette.primary.main, 0.05) },
+                                                    />
+                                                </Box>
+                                            </Grid>
+                                        </Grid>
+                                    )}
+
+                                    {/* Tab Content: Resources */}
+                                    {activeTab === 1 && (
+                                        <Grid container spacing={6}>
+                                            <Grid size={{ xs: 12, xl: 8 }}>
+                                                <Box sx={{ bgcolor: theme.palette.action.hover, p: 3, borderRadius: 3, border: `1px solid ${theme.palette.divider}` }}>
+                                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                                                        <Typography variant="subtitle1" sx={{ fontWeight: 700, color: theme.palette.text.primary }}>
+                                                            Lesson Resources
+                                                        </Typography>
+                                                        {currentLesson?.resources && currentLesson.resources.length > 1 && (
+                                                            <Button
+                                                                size="small"
+                                                                variant="contained"
+                                                                startIcon={<DownloadIcon />}
+                                                                sx={{ textTransform: 'none', fontWeight: 600, bgcolor: theme.palette.primary.main, '&:hover': { bgcolor: theme.palette.primary.dark } }}
+                                                                onClick={() => {
+                                                                    currentLesson?.resources?.forEach((resource) => {
+                                                                        const link = document.createElement('a');
+                                                                        link.href = getResourceUrl(resource.file_path);
+                                                                        link.download = resource.title;
+                                                                        link.target = '_blank';
+                                                                        link.click();
+                                                                    });
                                                                 }}
                                                             >
-                                                                <Box sx={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
-                                                                    <Box sx={{
-                                                                        width: 40,
-                                                                        height: 40,
-                                                                        bgcolor: getFileBgColor(resource.file_type, theme),
-                                                                        color: getFileIconColor(resource.file_type, theme),
-                                                                        borderRadius: 1,
-                                                                        display: 'flex',
-                                                                        alignItems: 'center',
-                                                                        justifyContent: 'center',
-                                                                        mr: 2,
-                                                                        flexShrink: 0,
-                                                                    }}>
-                                                                        {getFileIcon(resource.file_type)}
+                                                                Download All
+                                                            </Button>
+                                                        )}
+                                                    </Box>
+                                                    {currentLesson?.resources && currentLesson.resources.length > 0 ? (
+                                                        <Grid container spacing={2}>
+                                                            {currentLesson.resources.map((resource) => (
+                                                                <Grid size={{ xs: 12, sm: 6 }} key={resource.id}>
+                                                                    <Box
+                                                                        component="a"
+                                                                        href={getResourceUrl(resource.file_path)}
+                                                                        download
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        sx={{
+                                                                            p: 2,
+                                                                            bgcolor: theme.palette.background.paper,
+                                                                            borderRadius: 2,
+                                                                            border: `1px solid ${theme.palette.action.hover}`,
+                                                                            textDecoration: 'none',
+                                                                            cursor: 'pointer',
+                                                                            transition: 'all 0.2s ease',
+                                                                            display: 'flex',
+                                                                            justifyContent: 'space-between',
+                                                                            alignItems: 'center',
+                                                                            height: '100%',
+                                                                            '&:hover': { borderColor: theme.palette.primary.main, bgcolor: alpha(theme.palette.primary.main, 0.05) },
+                                                                        }}
+                                                                    >
+                                                                        <Box sx={{ display: 'flex', alignItems: 'center', flex: 1, minWidth: 0 }}>
+                                                                            <Box sx={{
+                                                                                width: 40,
+                                                                                height: 40,
+                                                                                bgcolor: getFileBgColor(resource.file_type, theme),
+                                                                                color: getFileIconColor(resource.file_type, theme),
+                                                                                borderRadius: 1,
+                                                                                display: 'flex',
+                                                                                alignItems: 'center',
+                                                                                justifyContent: 'center',
+                                                                                mr: 2,
+                                                                                flexShrink: 0,
+                                                                            }}>
+                                                                                {getFileIcon(resource.file_type)}
+                                                                            </Box>
+                                                                            <Box sx={{ minWidth: 0 }}>
+                                                                                <Typography variant="subtitle2" sx={{ fontWeight: 600, color: theme.palette.text.primary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                                    {resource.title}
+                                                                                </Typography>
+                                                                                <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
+                                                                                    {formatFileSize(resource.file_size)}
+                                                                                </Typography>
+                                                                            </Box>
+                                                                        </Box>
+                                                                        <Box sx={{ display: 'flex', alignItems: 'center', color: theme.palette.text.disabled, ml: 1, flexShrink: 0 }}>
+                                                                            <DownloadIcon />
+                                                                        </Box>
                                                                     </Box>
-                                                                    <Box sx={{ minWidth: 0 }}>
-                                                                        <Typography variant="subtitle2" sx={{ fontWeight: 600, color: theme.palette.text.primary, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                                            {resource.title}
-                                                                        </Typography>
-                                                                        <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
-                                                                            {formatFileSize(resource.file_size)}
-                                                                        </Typography>
-                                                                    </Box>
-                                                                </Box>
-                                                                <Box sx={{ display: 'flex', alignItems: 'center', color: theme.palette.text.disabled, ml: 1, flexShrink: 0 }}>
-                                                                    <DownloadIcon />
-                                                                </Box>
-                                                            </Box>
+                                                                </Grid>
+                                                            ))}
                                                         </Grid>
-                                                    ))}
-                                                </Grid>
-                                            ) : (
-                                                <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
-                                                    No resources available for this lesson.
-                                                </Typography>
-                                            )}
-                                        </Box>
-                                    </Grid>
-                                </Grid>
-                            )}
+                                                    ) : (
+                                                        <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+                                                            No resources available for this lesson.
+                                                        </Typography>
+                                                    )}
+                                                </Box>
+                                            </Grid>
+                                        </Grid>
+                                    )}
 
-                            {/* Tab Content: Discussion */}
-                            {activeTab === 2 && (
-                                <Box sx={{ py: 4 }}>
-                                    <Typography variant="body1" sx={{ color: theme.palette.text.secondary }}>
-                                        Discussion feature coming soon.
-                                    </Typography>
-                                </Box>
+                                    {/* Tab Content: Discussion */}
+                                    {activeTab === 2 && currentLesson && (
+                                        <Box sx={{ py: 2 }}>
+                                            <LessonDiscussion lessonId={currentLesson.id} />
+                                        </Box>
+                                    )}
+                                </>
                             )}
                         </Box>
                     </Box>
@@ -1009,7 +1050,9 @@ export default function CoursePlayer() {
                                                             mr: 1.5,
                                                             flexShrink: 0,
                                                         }}>
-                                                            {isCurrent ? (
+                                                            {lesson.is_locked ? (
+                                                                <LockIcon sx={{ fontSize: 16 }} />
+                                                            ) : isCurrent ? (
                                                                 <PlayIcon sx={{ fontSize: 18 }} />
                                                             ) : isCompleted ? (
                                                                 <CheckIcon sx={{ fontSize: 12 }} />

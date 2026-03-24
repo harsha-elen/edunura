@@ -44,6 +44,7 @@ interface CourseAttributes {
     meta_title?: string;
     meta_description?: string;
     visibility?: 'draft' | 'published' | 'private';
+    is_sequential?: boolean;
     created_by: number;
     created_at?: Date;
     updated_at?: Date;
@@ -81,6 +82,7 @@ class Course extends Model<CourseAttributes, CourseCreationAttributes> implement
     public meta_title?: string;
     public meta_description?: string;
     public visibility?: 'draft' | 'published' | 'private';
+    public is_sequential?: boolean;
     public created_by!: number;
 
     public readonly created_at!: Date;
@@ -217,6 +219,10 @@ Course.init(
             type: DataTypes.ENUM('draft', 'published', 'private'),
             defaultValue: 'draft',
             comment: 'draft=admins only, published=all students, private=invite only',
+        },
+        is_sequential: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false,
         },
         created_by: {
             type: DataTypes.INTEGER.UNSIGNED,

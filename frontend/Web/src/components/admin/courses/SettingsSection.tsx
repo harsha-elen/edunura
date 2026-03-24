@@ -16,6 +16,8 @@ interface SettingsSectionProps {
     setRatingEnabled: (value: boolean) => void;
     certEnabled: boolean;
     setCertEnabled: (value: boolean) => void;
+    isSequential: boolean;
+    setIsSequential: (value: boolean) => void;
     visibility: 'draft' | 'published';
     setVisibility: (value: 'draft' | 'published') => void;
     metaTitle: string;
@@ -31,6 +33,8 @@ const SettingsSection: React.FC<SettingsSectionProps> = ({
     setRatingEnabled,
     certEnabled,
     setCertEnabled,
+    isSequential,
+    setIsSequential,
     visibility,
     setVisibility,
     metaTitle,
@@ -95,6 +99,20 @@ const SettingsSection: React.FC<SettingsSectionProps> = ({
                         <Switch
                             checked={certEnabled}
                             onChange={(e) => setCertEnabled(e.target.checked)}
+                            sx={{
+                                '& .MuiSwitch-switchBase.Mui-checked': { color: theme.palette.primary.main },
+                                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: theme.palette.primary.main },
+                            }}
+                        />
+                    </Box>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 3 }}>
+                        <Box>
+                            <Typography sx={{ fontSize: '0.875rem', fontWeight: 600, color: '#0d141b' }}>Enforce Sequential Learning</Typography>
+                            <Typography sx={{ fontSize: '0.75rem', color: '#4c739a' }}>Students must complete lessons in order and cannot skip ahead.</Typography>
+                        </Box>
+                        <Switch
+                            checked={isSequential}
+                            onChange={(e) => setIsSequential(e.target.checked)}
                             sx={{
                                 '& .MuiSwitch-switchBase.Mui-checked': { color: theme.palette.primary.main },
                                 '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { bgcolor: theme.palette.primary.main },

@@ -10,6 +10,7 @@ export interface ProfileData {
     role: string;
     created_at: string;
     last_login: string | null;
+    is_two_factor_enabled?: boolean;
 }
 
 export interface UpdateProfileData {

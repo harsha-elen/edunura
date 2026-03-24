@@ -110,29 +110,28 @@ class JitsiService {
             const payload = {
                 iss: appId,
                 sub: jitsiDomain,
-                aud: appId,           // aud must match APP_ID for Prosody JWT validation
+                aud: 'jitsi',         // must be "jitsi" for standalone Jitsi server
                 room: roomName,
                 exp: Math.floor(Date.now() / 1000) + 24 * 3600, // Valid for 24 hours
-                // All user info goes inside context — NOT at top level
                 context: {
                     user: {
-                        id: String(params.email || params.displayName || 'guest'),
-                        avatar: '',
                         name: params.displayName || 'Guest',
                         email: params.email || '',
-                        // CRITICAL: false prevents Jitsi from granting moderator role
-                        moderator: params.isHost === true,
                         affiliation: params.isHost === true ? 'owner' : 'member',
-                    },
-                    features: {
-                        livestream: params.isHost === true,
-                        recording: params.isHost === true,
-                        'screen-sharing': true,
                     },
                 },
             };
 
+            console.log('[JITSI JWT] Signing token with payload:', JSON.stringify(payload, null, 2));
+            console.log('[JITSI JWT] appId:', appId, '| appSecret length:', appSecret.length);
+            console.log('[JITSI JWT] isHost param:', params.isHost, '| affiliation:', payload.context.user.affiliation);
+
             const token = jwt.sign(payload, appSecret, { algorithm: 'HS256' });
+
+            // Decode and log to verify what's actually in the token
+            const decoded = jwt.decode(token);
+            console.log('[JITSI JWT] Decoded token verification:', JSON.stringify(decoded, null, 2));
+
             return token;
         } catch (error) {
             // If JWT generation fails, allow public access
@@ -214,127 +213,24 @@ class JitsiService {
     }
 
     /**
-     * Generate meeting configuration for embedding
-     * This includes iframe configuration for embedding Jitsi in LMS
-     * 
-     * ROLE-BASED ACCESS:
-     * - Moderator (Teachers/Admins): Full toolbar + mute-everyone + recording
-     * - Participant (Students): Limited toolbar, cannot mute others
+     * Generate simplified meeting configuration for Jitsi React SDK
+     * Returns only essential fields - frontend handles UI config via SDK props
      */
     public async getEmbedConfig(params: JitsiMeetingParams): Promise<{
         domain: string;
         roomName: string;
         jwt?: string;
-        jitsiEmbedUrl: string;
-        options: any;
     }> {
-        try {
-            const domain = await this.getDomain();
-            const token = await this.generateJWT(params);
+        const domain = await this.getDomain();
+        const token = await this.generateJWT(params);
 
-            // ─── Build role-based toolbar buttons ─────────────────────────────
-            // Buttons available to ALL users (students + teachers)
-            const baseParticipantButtons = [
-                'microphone',
-                'camera',
-                'desktop',              // Screen sharing - available to all
-                'fullscreen',
-                'fodeviceselection',    // Choose camera/mic
-                'hangup',
-                'profile',
-                'chat',
-                'settings',
-                'raisehand',            // Can ask to speak
-                'videoquality',
-                'filmstrip',
-                'feedback',
-                'stats',
-                'shortcuts',
-                'tileview',             // Grid view
-                'download',
-                'help',
-                'e2ee',                 // End-to-end encryption
-                'security',
-            ];
+        console.log(`[JITSI] Generating embed config for room: ${params.roomName}, isHost: ${params.isHost}, hasToken: ${!!token}`);
 
-            // Buttons ONLY for moderators (teachers/admins)
-            const moderatorOnlyButtons = [
-                'recording',            // 🔴 Record the meeting
-                'livestream',           // 🔴 Stream to YouTube/etc
-                'whiteboard',           // 🔴 Excalidraw drawing whiteboard
-                'sharedvideo',          // 🔴 Show YouTube videos to all
-                'invite',               // 🔴 Invite external users
-                'mute-everyone',        // 🔴 CRITICAL: Mute all participants
-                'videobackgroundblur',  // 🔴 Advanced feature
-            ];
-
-            // Build final toolbar based on role
-            const toolbarButtons = params.isHost === true
-                ? [...baseParticipantButtons, ...moderatorOnlyButtons]  // Teachers/Admins get ALL
-                : baseParticipantButtons;  // Students get LIMITED toolbar
-
-            console.log(`[JITSI ROLE] ${params.displayName || 'User'} joining as ${params.isHost ? 'MODERATOR' : 'PARTICIPANT'} (${toolbarButtons.length} toolbar buttons)`);
-
-            // Build options with role-based configuration
-            const options = {
-                roomName: params.roomName,
-                width: '100%',
-                height: 600,
-                parentNode: 'jitsi-container',
-                userInfo: {
-                    displayName: params.displayName || 'Guest',
-                    email: params.email,
-                },
-                configOverwrite: {
-                    prejoinPageEnabled: false,
-                    // Disable invite entirely for participants (toolbar + more menu + shortcuts)
-                    disableInviteFunctions: params.isHost !== true,
-                    // Hide lobby button for participants (only moderators can admit)
-                    hideLobbyButton: params.isHost === false,
-                },
-                interfaceConfigOverwrite: {
-                    SHOW_JITSI_WATERMARK: false,
-                    // 🔒 CRITICAL: Apply role-based toolbar filtering
-                    TOOLBAR_BUTTONS: toolbarButtons,
-                },
-            };
-
-            console.log(`[JITSI CONFIG] Room: ${params.roomName} | Moderator: ${params.isHost} | Toolbar: ${toolbarButtons.length} buttons`);
-
-            // ─── Build pre-configured embed URL with hash params ───────────────
-            // Jitsi reads #config.* and #interfaceConfig.* from the URL hash.
-            // This way the iframe gets the right config without the IFrame API.
-            const domainWithProtocol = domain.startsWith('http') ? domain : `https://${domain}`;
-            const baseUrl = `${domainWithProtocol}/${params.roomName}`;
-            const jwtParam = token ? `?jwt=${token}` : '';
-
-            // Build hash config params for participants (students)
-            const apiUrl = (process.env.API_URL || process.env.BACKEND_URL || 'https://api.edunura.com').replace(/\/$/, '');
-            const hashParts: string[] = [
-                `config.prejoinPageEnabled=false`,
-                `config.enableWelcomePage=false`,
-                `config.dynamicBrandingUrl=${encodeURIComponent(`${apiUrl}/api/live-classes/branding`)}`,
-            ];
-            if (params.isHost !== true) {
-                hashParts.push(`config.disableInviteFunctions=true`);
-                hashParts.push(`config.toolbarButtons=${encodeURIComponent(JSON.stringify(toolbarButtons))}`);
-            } else {
-                hashParts.push(`config.toolbarButtons=${encodeURIComponent(JSON.stringify(toolbarButtons))}`);
-            }
-
-            const jitsiEmbedUrl = `${baseUrl}${jwtParam}#${hashParts.join('&')}`;
-
-            return {
-                domain,
-                roomName: params.roomName,
-                ...(token && { jwt: token }),
-                jitsiEmbedUrl,  // Pre-built URL with all config — use this in the iframe
-                options,
-            };
-        } catch (error: any) {
-            console.error('[JITSI] Get embed config error:', error);
-            throw new Error(`Failed to generate Jitsi embed config: ${error.message}`);
-        }
+        return {
+            domain,
+            roomName: params.roomName,
+            ...(token && { jwt: token }),
+        };
     }
 
     /**

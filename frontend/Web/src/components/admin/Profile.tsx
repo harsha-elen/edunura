@@ -33,6 +33,7 @@ import {
 import Link from 'next/link';
 import { getProfile, updateProfile, uploadAvatar, changePassword, type ProfileData, type UpdateProfileData, type ChangePasswordData } from '@/services/profileService';
 import { STATIC_ASSETS_BASE_URL } from '@/services/apiClient';
+import TwoFactorSetup from '@/components/TwoFactorSetup';
 
 const Profile: React.FC = () => {
     const theme = useTheme();
@@ -434,23 +435,7 @@ const Profile: React.FC = () => {
                             </Box>
 
                             {/* Two-Factor Authentication */}
-                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 2, bgcolor: '#f6f7f8', borderRadius: 2 }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                    <Box sx={{ p: 1, bgcolor: 'rgba(7, 136, 56, 0.1)', color: '#078838', borderRadius: 2, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        <SecurityIcon />
-                                    </Box>
-                                    <Box>
-                                        <Typography variant="body2" sx={{ fontWeight: 700, color: '#0d141b' }}>Two-Factor Authentication</Typography>
-                                        <Typography variant="caption" sx={{ color: '#4c739a' }}>Recommended for enhanced security</Typography>
-                                    </Box>
-                                </Box>
-                                <Box sx={{ position: 'relative', display: 'inline-flex', alignItems: 'center', cursor: 'pointer' }}>
-                                    <Box sx={{
-                                        width: 44, height: 24, bgcolor: theme.palette.primary.main, borderRadius: '9999px', position: 'relative', transition: 'background-color 0.2s',
-                                        '&::after': { content: '""', position: 'absolute', top: '2px', left: '22px', width: 20, height: 20, bgcolor: '#ffffff', borderRadius: '50%', transition: 'left 0.2s' },
-                                    }} />
-                                </Box>
-                            </Box>
+                            <TwoFactorSetup is2FAEnabled={profileData.is_two_factor_enabled || false} onStatusChange={(enabled) => setProfileData({ ...profileData, is_two_factor_enabled: enabled })} />
                         </Box>
                     </Box>
                 </Box>

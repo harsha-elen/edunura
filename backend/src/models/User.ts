@@ -27,6 +27,10 @@ interface UserAttributes {
     billing_country?: string;
     is_active: boolean;
     is_verified: boolean;
+    two_factor_secret?: string;
+    is_two_factor_enabled: boolean;
+    verification_otp?: string;
+    verification_otp_expires_at?: Date;
     last_login?: Date;
     reset_password_token?: string;
     reset_password_expires?: Date;
@@ -34,7 +38,7 @@ interface UserAttributes {
     updated_at?: Date;
 }
 
-interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'is_active' | 'is_verified'> { }
+interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'is_active' | 'is_verified' | 'is_two_factor_enabled'> { }
 
 class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
     public id!: number;
@@ -54,6 +58,10 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
     public billing_country?: string;
     public is_active!: boolean;
     public is_verified!: boolean;
+    public two_factor_secret?: string;
+    public is_two_factor_enabled!: boolean;
+    public verification_otp?: string;
+    public verification_otp_expires_at?: Date;
     public last_login?: Date;
     public reset_password_token?: string;
     public reset_password_expires?: Date;
@@ -71,6 +79,8 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
         delete values.password;
         delete values.reset_password_token;
         delete values.reset_password_expires;
+        delete values.two_factor_secret;
+        delete values.verification_otp;
         return values;
     }
 }
@@ -150,6 +160,22 @@ User.init(
         is_verified: {
             type: DataTypes.BOOLEAN,
             defaultValue: false,
+        },
+        two_factor_secret: {
+            type: DataTypes.STRING(255),
+            allowNull: true,
+        },
+        is_two_factor_enabled: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false,
+        },
+        verification_otp: {
+            type: DataTypes.STRING(255),
+            allowNull: true,
+        },
+        verification_otp_expires_at: {
+            type: DataTypes.DATE,
+            allowNull: true,
         },
         last_login: {
             type: DataTypes.DATE,

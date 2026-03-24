@@ -38,8 +38,10 @@ import {
     Visibility as VisibilityIcon,
     VisibilityOff as VisibilityOffIcon,
     NavigateNext as NavigateNextIcon,
+    FileDownload as FileDownloadIcon,
 } from '@mui/icons-material';
 import { getAllTeachers, updateTeacher, createTeacher, deleteTeacher, Teacher, CreateTeacherPayload, UpdateTeacherPayload } from '@/services/teachers';
+import { downloadCSV } from '@/utils/csvExport';
 
 const Teachers: React.FC = () => {
     const theme = useTheme();
@@ -222,6 +224,18 @@ const Teachers: React.FC = () => {
         return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
     };
 
+    const handleExportCSV = () => {
+        const exportData = filteredTeachers.map(t => ({
+            'First Name': t.first_name,
+            'Last Name': t.last_name,
+            'Email': t.email,
+            'Phone': t.phone || '',
+            'Status': t.is_active ? 'Active' : 'Inactive',
+            'Joined Date': new Date(t.created_at).toLocaleDateString()
+        }));
+        downloadCSV(exportData, 'teachers_export');
+    };
+
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4, width: '100%' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -241,9 +255,13 @@ const Teachers: React.FC = () => {
                         Manage and oversee all instructors on your platform ({teachers.length} total)
                     </Typography>
                 </Box>
-                <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                    <Button variant="outlined" startIcon={<FileDownloadIcon />} onClick={handleExportCSV} sx={{ textTransform: 'none', fontWeight: 600 }}>
+                        Export CSV
+                    </Button>
+                    <Button
+                        variant="contained"
+                        startIcon={<AddIcon />}
                     onClick={() => handleOpenDialog()}
                     sx={{
                         bgcolor: theme.palette.primary.main,
@@ -256,6 +274,7 @@ const Teachers: React.FC = () => {
                 >
                     Add Teacher
                 </Button>
+                </Box>
             </Box>
 
             {error && (

@@ -35,6 +35,7 @@ import {
     Help as HelpIcon,
     AddCircle as AddCircleIcon,
     SupervisedUserCircle as UsersIcon,
+    Person as PersonIcon,
 } from '@mui/icons-material';
 import { useRouter, usePathname } from 'next/navigation';
 import { getSettings } from '@/services/settings';
@@ -142,7 +143,8 @@ const AdminLayoutComponent: React.FC<AdminLayoutComponentProps> = ({ children })
         { text: 'Users', icon: <UsersIcon sx={{ fontSize: 22 }} />, path: '/admin/users', adminOnly: true },
         { text: 'Analytics', icon: <AnalyticsIcon sx={{ fontSize: 22 }} />, path: '/admin/analytics' },
         { text: 'Financials', icon: <PaymentsIcon sx={{ fontSize: 22 }} />, path: '/admin/financials' },
-        { text: 'Settings', icon: <SettingsIcon sx={{ fontSize: 22 }} />, path: '/admin/settings', divider: true, adminOnly: true },
+        { text: 'Profile', icon: <PersonIcon sx={{ fontSize: 22 }} />, path: '/admin/profile', divider: true },
+        { text: 'Settings', icon: <SettingsIcon sx={{ fontSize: 22 }} />, path: '/admin/settings', adminOnly: true },
         { text: 'Help & Support', icon: <HelpIcon sx={{ fontSize: 22 }} />, path: '/admin/help' },
     ];
 

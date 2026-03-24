@@ -27,19 +27,17 @@ const app: Application = express();
 const PORT = process.env.PORT || 5000;
 
 // CORS middleware - must be first to apply to all routes including static files
+// Strip any trailing slash and protocol from JITSI_DOMAIN before constructing origin
+const jitsiOrigin = process.env.JITSI_DOMAIN
+    ? process.env.JITSI_DOMAIN.replace(/\/$/, '').replace(/^https?:\/\//, '')
+    : null;
 app.use(cors({
     origin: [
-        'http://localhost:3000', // Student (legacy)
-        'http://localhost:3001', // Admin
-        'http://localhost:3002', // Teacher
-        'http://localhost:3003', // Student
-        'http://localhost:3004', // Student (alternate)
-        process.env.STUDENT_URL || '',
-        process.env.ADMIN_URL || '',
-        process.env.TEACHER_URL || '',
-        process.env.LANDING_URL || '',
-        // Allow Jitsi web container to fetch /api/live-classes/branding for dynamic branding
-        process.env.JITSI_DOMAIN ? `https://${process.env.JITSI_DOMAIN}` : '',
+        'http://localhost:3000', // Unified Local Frontend
+        process.env.FRONTEND_URL || '',
+        // Allow Jitsi server to fetch branding endpoint and load logo images
+        jitsiOrigin ? `https://${jitsiOrigin}` : '',
+        jitsiOrigin ? `http://${jitsiOrigin}` : '',
     ].filter(Boolean),
     credentials: true,
 }));

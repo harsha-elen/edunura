@@ -95,6 +95,7 @@ const CreateCourse: React.FC<CreateCourseProps> = ({ editCourseId }) => {
     const [forumEnabled, setForumEnabled] = useState(true);
     const [ratingEnabled, setRatingEnabled] = useState(false);
     const [certEnabled, setCertEnabled] = useState(true);
+    const [isSequential, setIsSequential] = useState(false);
     const [visibility, setVisibility] = useState<'draft' | 'published'>('draft');
     const [metaTitle, setMetaTitle] = useState('');
     const [metaDescription, setMetaDescription] = useState('');
@@ -191,6 +192,7 @@ const CreateCourse: React.FC<CreateCourseProps> = ({ editCourseId }) => {
                 setForumEnabled(course.enable_discussion_forum ?? true);
                 setRatingEnabled(course.show_course_rating ?? false);
                 setCertEnabled(course.enable_certificate ?? true);
+                setIsSequential(course.is_sequential ?? false);
                 setMetaTitle(course.meta_title || '');
                 setMetaDescription(course.meta_description || '');
 
@@ -270,6 +272,7 @@ const CreateCourse: React.FC<CreateCourseProps> = ({ editCourseId }) => {
             enable_discussion_forum: forumEnabled,
             show_course_rating: ratingEnabled,
             enable_certificate: certEnabled,
+            is_sequential: isSequential,
             visibility,
             meta_title: metaTitle,
             meta_description: metaDescription,
@@ -1326,6 +1329,8 @@ const CreateCourse: React.FC<CreateCourseProps> = ({ editCourseId }) => {
                         setRatingEnabled={setRatingEnabled}
                         certEnabled={certEnabled}
                         setCertEnabled={setCertEnabled}
+                        isSequential={isSequential}
+                        setIsSequential={setIsSequential}
                         visibility={visibility}
                         setVisibility={setVisibility}
                         metaTitle={metaTitle}

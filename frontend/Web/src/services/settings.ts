@@ -39,3 +39,15 @@ export const getMeetingPlatform = async (): Promise<'zoom' | 'jitsi'> => {
         return 'zoom'; // default to zoom
     }
 };
+
+export const getOrgLogoUrl = async (): Promise<string | undefined> => {
+    try {
+        const response = await apiClient.get('/settings');
+        const orgLogo: string = response.data?.data?.org_logo || '';
+        if (!orgLogo) return undefined;
+        const apiBase = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api').replace(/\/api$/, '');
+        return `${apiBase}${orgLogo}`;
+    } catch {
+        return undefined;
+    }
+};

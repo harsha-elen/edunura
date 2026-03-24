@@ -27,11 +27,14 @@ interface LessonAttributes {
     is_free_preview: boolean;
     is_published: boolean;
     start_time?: Date;
+    release_date?: Date;
+    drip_days?: number;
+    prerequisite_lesson_id?: number;
     created_at?: Date;
     updated_at?: Date;
 }
 
-interface LessonCreationAttributes extends Optional<LessonAttributes, 'id' | 'is_published' | 'order' | 'is_free_preview' | 'content_body' | 'file_path' | 'zoom_meeting_id' | 'zoom_join_url' | 'content_platform' | 'jitsi_room_name' | 'jitsi_join_url' | 'duration'> { }
+interface LessonCreationAttributes extends Optional<LessonAttributes, 'id' | 'is_published' | 'order' | 'is_free_preview' | 'content_body' | 'file_path' | 'zoom_meeting_id' | 'zoom_join_url' | 'content_platform' | 'jitsi_room_name' | 'jitsi_join_url' | 'duration' | 'release_date' | 'drip_days' | 'prerequisite_lesson_id'> { }
 
 class Lesson extends Model<LessonAttributes, LessonCreationAttributes> implements LessonAttributes {
     public id!: number;
@@ -50,6 +53,9 @@ class Lesson extends Model<LessonAttributes, LessonCreationAttributes> implement
     public is_free_preview!: boolean;
     public is_published!: boolean;
     public start_time?: Date;
+    public release_date?: Date;
+    public drip_days?: number;
+    public prerequisite_lesson_id?: number;
 
     public readonly created_at!: Date;
     public readonly updated_at!: Date;
@@ -127,6 +133,18 @@ Lesson.init(
         },
         start_time: {
             type: DataTypes.DATE,
+            allowNull: true,
+        },
+        release_date: {
+            type: DataTypes.DATE,
+            allowNull: true,
+        },
+        drip_days: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+        },
+        prerequisite_lesson_id: {
+            type: DataTypes.INTEGER.UNSIGNED,
             allowNull: true,
         },
     },

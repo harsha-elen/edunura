@@ -259,7 +259,7 @@ const LiveClassLessonUpload: React.FC<LiveClassLessonUploadProps> = ({
                             {isEditMode ? 'Edit Live Class' : 'Schedule New Live Class'}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                            {meetingPlatform === 'jitsi' ? 'Set up your Jitsi session' : 'Set up your Zoom session'}
+                            {meetingPlatform === 'jitsi' ? 'Set up your EduMeet session' : 'Set up your Zoom session'}
                         </Typography>
                     </Box>
                 </Box>

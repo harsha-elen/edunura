@@ -42,6 +42,8 @@ CREATE TABLE IF NOT EXISTS `users` (
   `avatar` varchar(500) DEFAULT NULL,
   `is_active` tinyint(1) DEFAULT 1,
   `is_verified` tinyint(1) DEFAULT 0,
+  `two_factor_secret` varchar(255) DEFAULT NULL,
+  `is_two_factor_enabled` tinyint(1) NOT NULL DEFAULT 0,
   `last_login` datetime DEFAULT NULL,
   `reset_password_token` varchar(255) DEFAULT NULL,
   `reset_password_expires` datetime DEFAULT NULL,
@@ -256,4 +258,19 @@ CREATE TABLE IF NOT EXISTS `system_settings` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `key` (`key`),
   KEY `system_settings_category` (`category`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Table: lesson_discussions
+CREATE TABLE IF NOT EXISTS `lesson_discussions` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `lesson_id` int(10) unsigned NOT NULL,
+  `user_id` int(10) unsigned NOT NULL,
+  `content` text NOT NULL,
+  `created_at` datetime DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `lesson_id` (`lesson_id`),
+  KEY `user_id` (`user_id`),
+  CONSTRAINT `lesson_discussions_ibfk_1` FOREIGN KEY (`lesson_id`) REFERENCES `lessons` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `lesson_discussions_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

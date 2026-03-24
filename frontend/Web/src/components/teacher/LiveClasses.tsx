@@ -357,10 +357,14 @@ const TeacherLiveClasses: React.FC = () => {
                                     <Button
                                         variant="contained"
                                         startIcon={<PlayCircleIcon />}
-                                        component="a"
-                                        href={session.start_url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
+                                        onClick={() => {
+                                            // For Jitsi: open via /meeting/ route so heartbeats are sent
+                                            if (session.meeting_type === 'jitsi' && session.jitsi_room_name) {
+                                                window.open(`/meeting/${session.jitsi_room_name}`, '_blank');
+                                            } else {
+                                                window.open(session.start_url, '_blank');
+                                            }
+                                        }}
                                         sx={{
                                             bgcolor: color,
                                             borderRadius: '12px',

@@ -5,6 +5,7 @@ interface TokenPayload {
     userId: number;
     email: string;
     role: string;
+    isTemp?: boolean;
 }
 
 const getAccessSecret = (): string => {
@@ -48,6 +49,18 @@ export const generateRefreshToken = (user: User): string => {
     const expiresIn: string | number = process.env.JWT_REFRESH_EXPIRES_IN || '30d';
 
     return jwt.sign(payload, secret, { expiresIn } as any);
+};
+
+export const generateTempToken = (user: User): string => {
+    const payload: TokenPayload = {
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+        isTemp: true,
+    };
+
+    const secret = getAccessSecret();
+    return jwt.sign(payload, secret, { expiresIn: '10m' } as any);
 };
 
 export const verifyToken = (token: string): TokenPayload => {

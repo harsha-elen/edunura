@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { validationResult } from 'express-validator';
 import { Op } from 'sequelize';
+import jwt from 'jsonwebtoken';
 import ZoomService from '../../services/zoomService';
 import JitsiService from '../../services/jitsiService';
 import SystemSetting from '../../models/SystemSetting';
@@ -12,15 +13,34 @@ import User, { UserRole } from '../../models/User';
 import { getSystemTimezone, parseNaiveDateInTimezone, utcToNaiveLocal } from '../../utils/timezone';
 
 // ─── Public Jitsi dynamic branding endpoint ─────────────────────────────────
-export const getJitsiBranding = async (_req: Request, res: Response) => {
+// Jitsi calls this URL with ?room=<roomName> on every conference load.
+// We look up the room → LiveSession → Course thumbnail as the meeting logo.
+// Falls back to the global org_logo if no course-level branding is found.
+export const getJitsiBranding = async (req: Request, res: Response) => {
     // Explicitly allow any origin — Jitsi JS fetches this from meet.edunura.com
     res.setHeader('Access-Control-Allow-Origin', '*');
+    const apiUrl = (process.env.API_URL || process.env.BACKEND_URL || 'https://api.edunura.com').replace(/\/$/, '');
+
     try {
+        const roomName = req.query.room as string | undefined;
+
+        // 1. Try per-room branding: look up LiveSession by room name
+        if (roomName) {
+            const session = await LiveSession.findOne({ where: { jitsi_room_name: roomName } });
+            if (session) {
+                const course = await Course.findByPk(session.course_id, { attributes: ['thumbnail'] });
+                if (course?.thumbnail) {
+                    const logoImageUrl = `${apiUrl}${course.thumbnail}`;
+                    return res.json({ logoImageUrl, logoClickUrl: '' });
+                }
+            }
+        }
+
+        // 2. Fallback: global org logo from system settings (empty = no logo shown)
         const logoSetting = await SystemSetting.findOne({ where: { key: 'org_logo' } });
-        const apiUrl = (process.env.API_URL || process.env.BACKEND_URL || 'https://api.edunura.com').replace(/\/$/, '');
         const logoPath = logoSetting?.value || '';
         const logoImageUrl = logoPath ? `${apiUrl}${logoPath}` : '';
-        return res.json({ logoImageUrl, logoClickUrl: '' });
+        return res.json({ logoImageUrl, logoClickUrl: '', hideLogo: !logoImageUrl });
     } catch {
         return res.json({ logoImageUrl: '', logoClickUrl: '' });
     }
@@ -507,7 +527,7 @@ export const getJitsiConfig = async (req: Request, res: Response) => {
         // Participants: Students only
         const isHost = [UserRole.ADMIN, UserRole.MODERATOR, UserRole.TEACHER].includes(user.role);
 
-        console.log('[JITSI ACCESS] User: ' + user.id + ' | Role: ' + user.role + ' | isHost: ' + isHost);
+        console.log('[JITSI ACCESS] User ID: ' + user.id + ' | Role: ' + user.role + ' | isHost: ' + isHost + ' | Meeting ID: ' + id);
 
         // DEBUG: Log user role for debugging
         console.log('[JITSI DEBUG] User details:', {
@@ -525,6 +545,19 @@ export const getJitsiConfig = async (req: Request, res: Response) => {
         if (isHost) {
             hostHeartbeats.set(session.jitsi_room_name, Date.now());
             console.log('[JITSI] Host joined/rejoined — heartbeat set for room:', session.jitsi_room_name);
+        } else {
+            // ─── Guard: block students from joining an empty/host-less room ─
+            // When a host leaves and a student reloads, Jitsi would auto-promote
+            // the first joiner in an empty room to moderator regardless of JWT.
+            // Prevent this by refusing to issue a token until the host is back.
+            const lastHostSeen = hostHeartbeats.get(session.jitsi_room_name) ?? null;
+            const hostIsActive = lastHostSeen !== null && (Date.now() - lastHostSeen) < HEARTBEAT_TIMEOUT_MS;
+            if (!hostIsActive) {
+                return res.status(425).json({
+                    status: 'waiting',
+                    message: 'The host has not started the meeting yet. Please wait.',
+                });
+            }
         }
         
         const jitsiConfig = await JitsiService.getEmbedConfig({
@@ -540,6 +573,19 @@ export const getJitsiConfig = async (req: Request, res: Response) => {
             userRole: user.role,
             displayName: `${user.first_name} ${user.last_name}`
         });
+
+        // Decode JWT to verify affiliation in the token
+        if (jitsiConfig.jwt) {
+            const decoded = jwt.decode(jitsiConfig.jwt) as any;
+            console.log('[JITSI JWT VERIFY] Token payload for user', user.email, ':', JSON.stringify({
+                aud: decoded?.aud,
+                iss: decoded?.iss,
+                sub: decoded?.sub,
+                room: decoded?.room,
+                affiliation: decoded?.context?.user?.affiliation,
+                userName: decoded?.context?.user?.name,
+            }));
+        }
 
         return res.status(200).json({
             status: 'success',

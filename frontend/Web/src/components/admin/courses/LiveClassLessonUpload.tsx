@@ -285,10 +285,10 @@ const LiveClassLessonUpload: React.FC<LiveClassLessonUploadProps> = ({
                     </Box>
                     <Box>
                         <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.125rem' }}>
-                            {isEditMode ? `Edit ${meetingPlatform === 'jitsi' ? 'Jitsi' : 'Zoom'} Live Class` : `Schedule ${meetingPlatform === 'jitsi' ? 'Jitsi' : 'Zoom'} Live Class`}
+                            {isEditMode ? `Edit ${meetingPlatform === 'jitsi' ? 'EduMeet' : 'Zoom'} Live Class` : `Schedule ${meetingPlatform === 'jitsi' ? 'EduMeet' : 'Zoom'} Live Class`}
                         </Typography>
                         <Typography variant="body2" sx={{ color: '#64748b', fontSize: '0.875rem' }}>
-                            {isEditMode ? `Update your ${meetingPlatform === 'jitsi' ? 'Jitsi' : 'Zoom'} session configuration` : `Set up your ${meetingPlatform === 'jitsi' ? 'Jitsi' : 'Zoom'} session and materials`}
+                            {isEditMode ? `Update your ${meetingPlatform === 'jitsi' ? 'EduMeet' : 'Zoom'} session configuration` : `Set up your ${meetingPlatform === 'jitsi' ? 'EduMeet' : 'Zoom'} session and materials`}
                         </Typography>
                     </Box>
                 </Box>

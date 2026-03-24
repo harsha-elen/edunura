@@ -43,8 +43,10 @@ import {
     Visibility as VisibilityIcon,
     VisibilityOff as VisibilityOffIcon,
     NavigateNext as NavigateNextIcon,
+    FileDownload as FileDownloadIcon,
 } from '@mui/icons-material';
 import usersService, { User, CreateUserPayload, UpdateUserPayload } from '@/services/users';
+import { downloadCSV } from '@/utils/csvExport';
 
 const Users: React.FC = () => {
     const router = useRouter();
@@ -279,6 +281,18 @@ const Users: React.FC = () => {
         return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
     };
 
+    const handleExportCSV = () => {
+        const exportData = filteredUsers.map(u => ({
+            'First Name': u.first_name,
+            'Last Name': u.last_name,
+            'Email': u.email,
+            'Phone': u.phone || '',
+            'Role': u.role,
+            'Status': u.is_active ? 'Active' : 'Inactive'
+        }));
+        downloadCSV(exportData, 'users_export');
+    };
+
     // Don't render if not admin
     if (userData?.role !== 'admin') {
         return null;
@@ -304,14 +318,19 @@ const Users: React.FC = () => {
                         Manage administrators and moderators
                     </Typography>
                 </Box>
-                <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={() => handleOpenDialog()}
-                    sx={{ borderRadius: 2 }}
-                >
-                    Add User
-                </Button>
+                <Box sx={{ display: 'flex', gap: 2 }}>
+                    <Button variant="outlined" startIcon={<FileDownloadIcon />} onClick={handleExportCSV} sx={{ textTransform: 'none', fontWeight: 600 }}>
+                        Export CSV
+                    </Button>
+                    <Button
+                        variant="contained"
+                        startIcon={<AddIcon />}
+                        onClick={() => handleOpenDialog()}
+                        sx={{ borderRadius: 2 }}
+                    >
+                        Add User
+                    </Button>
+                </Box>
             </Box>
 
             {/* Search Bar */}

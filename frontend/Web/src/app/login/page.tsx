@@ -25,7 +25,7 @@ import {
     Visibility,
     VisibilityOff,
 } from '@mui/icons-material';
-import { login as loginApi } from '@/services/authService';
+import { login as loginApi, verify2FA } from '@/services/authService';
 import { STATIC_ASSETS_BASE_URL, API_BASE_URL } from '@/services/apiClient';
 import { useAuth } from '@/context/AuthContext';
 
@@ -38,6 +38,9 @@ const Login: React.FC = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [step2FA, setStep2FA] = useState(false);
+    const [tempToken, setTempToken] = useState('');
+    const [otpCode, setOtpCode] = useState('');
     const [orgLogo, setOrgLogo] = useState<string | null>(typeof window !== 'undefined' ? localStorage.getItem('org_logo') : null);
     const [siteName, setSiteName] = useState(typeof window !== 'undefined' ? localStorage.getItem('site_name') || 'LMS Enterprise' : 'LMS Enterprise');
     const [safeNext, setSafeNext] = useState<string | undefined>(undefined);
@@ -51,38 +54,73 @@ const Login: React.FC = () => {
     }, []);
 
     useEffect(() => {
+        console.log('[Login Page] API Base URL:', API_BASE_URL);
+        console.log('[Login Page] Fetching organization settings...');
         fetch(`${API_BASE_URL}/settings`)
-            .then(r => r.json())
+            .then(r => {
+                console.log('[Login Page] Settings response status:', r.status);
+                return r.json();
+            })
             .then(data => {
+                console.log('[Login Page] Settings data received:', data);
                 const logo = data?.data?.org_logo;
                 if (logo) {
                     setOrgLogo(logo);
                     localStorage.setItem('org_logo', logo);
+                    console.log('[Login Page] Logo set:', logo);
                 }
                 const name = data?.data?.site_name;
                 if (name) {
                     setSiteName(name);
                     localStorage.setItem('site_name', name);
+                    console.log('[Login Page] Site name set:', name);
                 }
             })
-            .catch(() => { });
+            .catch((err) => {
+                console.error('[Login Page] Failed to fetch settings:', err);
+            });
     }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         setLoading(true);
+        console.log('[Login Page] Login attempt started with email:', email);
+        console.log('[Login Page] API Base URL being used:', API_BASE_URL);
 
         try {
-            const response = await loginApi({ email, password });
-
-            if (response.status === 'success' && response.data) {
-                login(response.data.token, response.data.user, response.data.refreshToken, safeNext);
+            if (step2FA) {
+                const response = await verify2FA(otpCode, tempToken);
+                if (response.status === 'success' && response.data?.user && response.data?.token) {
+                    login(response.data.token, response.data.user as any, response.data.refreshToken!, safeNext);
+                } else {
+                    setError('Invalid verification code.');
+                    setLoading(false);
+                }
             } else {
-                setError('Login failed. Please check your credentials.');
-                setLoading(false);
+                console.log('[Login Page] Calling login API...');
+                const response = await loginApi({ email, password });
+                console.log('[Login Page] Login response received:', response);
+
+                if (response.status === 'success' && response.data) {
+                    if (response.data.requires2FA) {
+                        setStep2FA(true);
+                        setTempToken(response.data.tempToken!);
+                        setLoading(false);
+                        return;
+                    }
+                    console.log('[Login Page] Login successful! User:', response.data.user);
+                    login(response.data.token!, response.data.user as any, response.data.refreshToken!, safeNext);
+                } else {
+                    console.warn('[Login Page] Login response status not success:', response.status);
+                    setError('Login failed. Please check your credentials.');
+                    setLoading(false);
+                }
             }
         } catch (err: any) {
+            console.error('[Login Page] Login error:', err);
+            console.error('[Login Page] Error response:', err.response?.data);
+            console.error('[Login Page] Error message:', err.message);
             setError(err.response?.data?.message || 'Login failed. Please try again.');
             setLoading(false);
         }
@@ -150,76 +188,98 @@ const Login: React.FC = () => {
                     <Box component="form" onSubmit={handleSubmit} sx={{ px: 4, pb: 5, display: 'flex', flexDirection: 'column', gap: 2 }}>
                         {error && <Alert severity="error">{error}</Alert>}
 
-                        <Box>
-                            <Typography variant="body2" fontWeight={500} sx={{ mb: 0.5, color: 'text.primary' }}>
-                                Email Address
-                            </Typography>
-                            <TextField
-                                fullWidth
-                                id="email"
-                                placeholder="you@example.com"
-                                type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                required
-                                InputProps={{
-                                    startAdornment: (
-                                        <InputAdornment position="start">
-                                            <EmailIcon sx={{ color: 'text.secondary' }} />
-                                        </InputAdornment>
-                                    ),
-                                }}
-                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                            />
-                        </Box>
+                        {!step2FA ? (
+                            <>
+                                <Box>
+                                    <Typography variant="body2" fontWeight={500} sx={{ mb: 0.5, color: 'text.primary' }}>
+                                        Email Address
+                                    </Typography>
+                                    <TextField
+                                        fullWidth
+                                        id="email"
+                                        placeholder="you@example.com"
+                                        type="email"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        required
+                                        InputProps={{
+                                            startAdornment: (
+                                                <InputAdornment position="start">
+                                                    <EmailIcon sx={{ color: 'text.secondary' }} />
+                                                </InputAdornment>
+                                            ),
+                                        }}
+                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                                    />
+                                </Box>
 
-                        <Box>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
-                                <Typography variant="body2" fontWeight={500} sx={{ color: 'text.primary' }}>
-                                    Password
+                                <Box>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
+                                        <Typography variant="body2" fontWeight={500} sx={{ color: 'text.primary' }}>
+                                            Password
+                                        </Typography>
+                                    </Box>
+                                    <TextField
+                                        fullWidth
+                                        id="password"
+                                        placeholder="Enter your password"
+                                        type={showPassword ? 'text' : 'password'}
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        required
+                                        InputProps={{
+                                            startAdornment: (
+                                                <InputAdornment position="start">
+                                                    <LockIcon sx={{ color: 'text.secondary' }} />
+                                                </InputAdornment>
+                                            ),
+                                            endAdornment: (
+                                                <InputAdornment position="end">
+                                                    <IconButton
+                                                        onClick={() => setShowPassword(!showPassword)}
+                                                        edge="end"
+                                                    >
+                                                        {showPassword ? <VisibilityOff /> : <Visibility />}
+                                                    </IconButton>
+                                                </InputAdornment>
+                                            ),
+                                        }}
+                                        sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                                    />
+                                </Box>
+
+                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 0.5 }}>
+                                    <FormControlLabel
+                                        control={<Checkbox defaultChecked size="small" sx={{
+                                            color: 'grey.400',
+                                            '&.Mui-checked': { color: theme.palette.primary.main }
+                                        }} />}
+                                        label={<Typography variant="body2" color="text.secondary">Remember me</Typography>}
+                                    />
+                                    <Link href="/forgot-password" variant="body2" underline="hover" sx={{ color: theme.palette.primary.main, fontWeight: 500 }}>
+                                        Forgot Password?
+                                    </Link>
+                                </Box>
+                            </>
+                        ) : (
+                            <Box>
+                                <Typography variant="caption" sx={{ mb: 2, display: 'block', color: 'text.secondary' }}>
+                                    Your account is protected by Two-Factor Authentication. Please enter the generated code from your authenticator app.
                                 </Typography>
+                                <Typography variant="body2" fontWeight={500} sx={{ mb: 0.5, color: 'text.primary' }}>
+                                    Verification Code
+                                </Typography>
+                                <TextField
+                                    fullWidth
+                                    placeholder="6-digit code"
+                                    type="text"
+                                    value={otpCode}
+                                    onChange={(e) => setOtpCode(e.target.value)}
+                                    required
+                                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                                />
                             </Box>
-                            <TextField
-                                fullWidth
-                                id="password"
-                                placeholder="Enter your password"
-                                type={showPassword ? 'text' : 'password'}
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                                InputProps={{
-                                    startAdornment: (
-                                        <InputAdornment position="start">
-                                            <LockIcon sx={{ color: 'text.secondary' }} />
-                                        </InputAdornment>
-                                    ),
-                                    endAdornment: (
-                                        <InputAdornment position="end">
-                                            <IconButton
-                                                onClick={() => setShowPassword(!showPassword)}
-                                                edge="end"
-                                            >
-                                                {showPassword ? <VisibilityOff /> : <Visibility />}
-                                            </IconButton>
-                                        </InputAdornment>
-                                    ),
-                                }}
-                                sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                            />
-                        </Box>
-
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 0.5 }}>
-                            <FormControlLabel
-                                control={<Checkbox defaultChecked size="small" sx={{
-                                    color: 'grey.400',
-                                    '&.Mui-checked': { color: theme.palette.primary.main }
-                                }} />}
-                                label={<Typography variant="body2" color="text.secondary">Remember me</Typography>}
-                            />
-                            <Link href="#" variant="body2" underline="hover" sx={{ color: theme.palette.primary.main, fontWeight: 500 }}>
-                                Forgot Password?
-                            </Link>
-                        </Box>
+                        )}
 
                         <Button
                             type="submit"
@@ -238,7 +298,7 @@ const Login: React.FC = () => {
                                 boxShadow: `0 4px 6px -1px ${alpha(theme.palette.primary.main, 0.2)}`,
                             }}
                         >
-                            {loading ? <CircularProgress size={24} color="inherit" /> : 'Sign In'}
+                            {loading ? <CircularProgress size={24} color="inherit" /> : (step2FA ? 'Verify Code' : 'Sign In')}
                         </Button>
 
                         <Typography variant="body2" sx={{ textAlign: 'center', color: 'text.secondary' }}>

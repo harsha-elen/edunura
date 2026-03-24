@@ -1,5 +1,10 @@
 import StandaloneLiveClass from '@/components/teacher/StandaloneLiveClass';
 
-export default function LiveClassPage() {
-    return <StandaloneLiveClass />;
+interface LiveClassPageProps {
+    params: Promise<{ meetingId: string }>;
+}
+
+export default async function LiveClassPage({ params }: LiveClassPageProps) {
+    const { meetingId } = await params;
+    return <StandaloneLiveClass meetingId={meetingId} />;
 }

@@ -15,9 +15,7 @@ At your domain registrar, add these **A records** pointing to your VPS IP:
 |--------|-----------|
 | `@` (root) | VPS IP |
 | `{API_SUBDOMAIN}` (value from env) | VPS IP |
-| `app` | VPS IP ← skip if using path mode |
-| `admin` | VPS IP |
-| `teacher` | VPS IP |
+| `app` | VPS IP (for the unified frontend portal) |
 
 ---
 
@@ -74,25 +72,10 @@ First deploy takes ~5 minutes (building all frontends).
 
 Go to **Domains** tab → **Add Domain** for each service:
 
-**Subdomain mode** (`STUDENT_BASE_PATH=/`):
-
 | Domain | Service | Port |
 |--------|---------|------|
-| `clientdomain.com` | `landing` | `3000` |
+| `clientdomain.com` (or `app.clientdomain.com`) | `web-app` | `3000` |
 | `{API_SUBDOMAIN}.clientdomain.com` | `backend` | `5000` |
-| `app.clientdomain.com` | `student-app` | `80` |
-| `teacher.clientdomain.com` | `teacher-app` | `80` |
-| `admin.clientdomain.com` | `admin-app` | `80` |
-
-**Path mode** (`STUDENT_BASE_PATH=/app`):
-
-| Domain | Service | Port | Path Prefix |
-|--------|---------|------|-------------|
-| `clientdomain.com` | `landing` | `3000` | — |
-| `{API_SUBDOMAIN}.clientdomain.com` | `backend` | `5000` | — |
-| `clientdomain.com` | `student-app` | `80` | `/app` (no StripPrefix) |
-| `teacher.clientdomain.com` | `teacher-app` | `80` | — |
-| `admin.clientdomain.com` | `admin-app` | `80` | — |
 
 Enable **HTTPS** on each domain — Dokploy handles SSL automatically.
 
@@ -100,7 +83,7 @@ Enable **HTTPS** on each domain — Dokploy handles SSL automatically.
 
 ## Step 6 — First Login
 
-Go to `https://admin.clientdomain.com` and log in with the `ADMIN_EMAIL` and `ADMIN_PASSWORD` you set.
+Go to `https://app.clientdomain.com/login` (or your root domain `/login`) and log in with the `ADMIN_EMAIL` and `ADMIN_PASSWORD` you set.
 
 **After login, configure in Admin Panel → Settings:**
 - Razorpay (payment keys)
@@ -129,6 +112,6 @@ Enable **Auto Deploy** in Dokploy to redeploy automatically on every `git push`.
 - [ ] Add Docker Compose service (same repo)
 - [ ] Fill `.env.docker.example` with client values → paste in Environment tab
 - [ ] Deploy
-- [ ] Add 5 domains with HTTPS
+- [ ] Add domains for API and Web App with HTTPS
 - [ ] Login to admin panel → configure Razorpay, Zoom, Email
 - [ ] Change admin password

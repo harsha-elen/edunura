@@ -224,11 +224,39 @@ export const login = async (req: Request, res: Response): Promise<void> => {
             return;
         }
 
-        // Before logging in, ensure they are verified if they are a student
-        if (!user.is_verified && user.role === UserRole.STUDENT) {
-            res.status(403).json({
-                status: 'error',
-                message: 'Account not verified. Please verify your email.',
+        // Before logging in, ensure they are verified if they are a student or teacher
+        if (!user.is_verified && (user.role === UserRole.STUDENT || user.role === UserRole.TEACHER)) {
+            // Send OTP for email verification
+            const otpCode = generateOTP();
+            const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+            // Store OTP in reset_password fields temporarily for verification
+            user.reset_password_token = otpCode;
+            user.reset_password_expires = otpExpiresAt;
+            await user.save();
+
+            try {
+                await sendEmail(
+                    user.email,
+                    'Email Verification Required - LMS',
+                    `<h2>Email Verification Required</h2>
+                    <p>Your account needs email verification to proceed. Your verification code is: <strong>${otpCode}</strong></p>
+                    <p>This code will expire in 10 minutes.</p>`
+                );
+            } catch (emailErr) {
+                console.error('Failed to send verification email:', emailErr);
+                res.status(500).json({ status: 'error', message: 'Failed to send verification email' });
+                return;
+            }
+
+            res.status(200).json({
+                status: 'success',
+                message: 'Email verification required',
+                data: {
+                    requiresEmailVerification: true,
+                    email: user.email,
+                    userId: user.id,
+                },
             });
             return;
         }
@@ -569,5 +597,63 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
     } catch (error: any) {
         console.error('Reset password error:', error);
         res.status(500).json({ status: 'error', message: 'Failed to reset password' });
+    }
+};
+
+export const verifyEmailDuringLogin = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { email, otp } = req.body;
+
+        if (!email || !otp) {
+            res.status(400).json({ status: 'error', message: 'Email and OTP are required' });
+            return;
+        }
+
+        const user = await User.findOne({ where: { email } });
+
+        if (!user) {
+            res.status(404).json({ status: 'error', message: 'User not found' });
+            return;
+        }
+
+        // Check OTP
+        if (user.reset_password_token !== String(otp)) {
+            res.status(400).json({ status: 'error', message: 'Invalid or missing OTP' });
+            return;
+        }
+
+        if (!user.reset_password_expires || new Date() > user.reset_password_expires) {
+            res.status(400).json({ status: 'error', message: 'Verification code has expired' });
+            return;
+        }
+
+        // Mark user as verified
+        user.is_verified = true;
+        user.reset_password_token = null as any;
+        user.reset_password_expires = null as any;
+        user.setDataValue('reset_password_token', null as any);
+        user.setDataValue('reset_password_expires', null as any);
+        user.last_login = new Date();
+        await user.save();
+
+        // Generate tokens
+        const token = generateToken(user);
+        const refreshToken = generateRefreshToken(user);
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Email verified successfully',
+            data: {
+                token,
+                refreshToken,
+                user: user.toJSON(),
+            },
+        });
+    } catch (error: any) {
+        console.error('Email verification error:', error);
+        res.status(500).json({
+            status: 'error',
+            message: 'Failed to verify email',
+        });
     }
 };

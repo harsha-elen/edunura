@@ -30,6 +30,7 @@ import {
     Videocam as VideocamIcon,
     CalendarMonth as CalendarIcon,
     Person as PersonIcon,
+    AssignmentTurnedIn as AssignmentTurnedInIcon,
     Logout as LogoutIcon,
     School as SchoolIcon,
     Add as AddIcon,
@@ -136,6 +137,7 @@ const TeacherLayoutComponent: React.FC<TeacherLayoutComponentProps> = ({ childre
     const menuItems = [
         { text: 'Dashboard', icon: <DashboardIcon sx={{ fontSize: 22 }} />, path: '/teacher' },
         { text: 'My Courses', icon: <CoursesIcon sx={{ fontSize: 22 }} />, path: '/teacher/courses' },
+        { text: 'Assignment', icon: <AssignmentTurnedInIcon sx={{ fontSize: 22 }} />, path: '/teacher/assignments' },
         { text: 'Live Classes', icon: <VideocamIcon sx={{ fontSize: 22 }} />, path: '/teacher/live-classes' },
         { text: 'Calendar', icon: <CalendarIcon sx={{ fontSize: 22 }} />, path: '/teacher/calendar' },
     ];

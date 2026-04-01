@@ -1,7 +1,9 @@
 import { Request, Response } from 'express';
-import { Op } from 'sequelize';
+import { Op, col, fn, where } from 'sequelize';
 import { AuthRequest } from '../../middleware/auth';
-import { Course, CourseSection, Lesson, LessonResource, Enrollment, User, LessonDiscussion, LessonProgress } from '../../models';
+import { AssignmentSubmissionStatus } from '../../models/AssignmentSubmission';
+import { Course, CourseSection, Lesson, LessonResource, Enrollment, User, LessonDiscussion, LessonProgress, AssignmentSubmission } from '../../models';
+import CourseCategory from '../../models/CourseCategory';
 import { createCourseFolders, generateSlug, deleteCourseFolders, deleteFile } from '../../utils/folderService';
 import path from 'path';
 import ZoomService from '../../services/zoomService';
@@ -20,6 +22,7 @@ export const createCourse = async (req: AuthRequest, res: Response): Promise<voi
             level,
             outcomes,
             prerequisites,
+            tags,
             status,
             instructors,
             price,
@@ -66,6 +69,7 @@ export const createCourse = async (req: AuthRequest, res: Response): Promise<voi
             created_by: userId,
             outcomes: outcomes || [],
             prerequisites: prerequisites || [],
+            tags: Array.isArray(tags) ? tags : [],
             instructors: instructors || [],
             price: price !== undefined ? price : 0,
             discounted_price: discounted_price || 0,
@@ -105,7 +109,7 @@ export const createCourse = async (req: AuthRequest, res: Response): Promise<voi
 // ========================================
 export const getPublicCourses = async (req: Request, res: Response): Promise<void> => {
     try {
-        const { page = 1, limit = 12, search, category, level } = req.query;
+        const { page = 1, limit = 12, search, category, level, tags } = req.query;
         const offset = (Number(page) - 1) * Number(limit);
 
         const whereClause: any = { status: 'published' };
@@ -116,12 +120,66 @@ export const getPublicCourses = async (req: Request, res: Response): Promise<voi
                 { short_description: { [Op.like]: `%${search}%` } },
             ];
         }
-        if (category) whereClause.category = category;
+        if (category) {
+            const categoryFilter = String(category).trim();
+            const matchedCategory = await CourseCategory.findOne({
+                where: {
+                    [Op.or]: [
+                        { slug: categoryFilter },
+                        { name: categoryFilter },
+                    ],
+                },
+                attributes: ['name', 'slug'],
+            });
+
+            if (matchedCategory) {
+                const candidateValues = Array.from(
+                    new Set(
+                        [matchedCategory.slug, matchedCategory.name]
+                            .filter((value): value is string => Boolean(value))
+                            .map((value) => value.trim())
+                    )
+                );
+
+                whereClause.category = candidateValues.length > 0
+                    ? { [Op.in]: candidateValues }
+                    : categoryFilter;
+            } else {
+                whereClause.category = categoryFilter;
+            }
+        }
         if (level) whereClause.level = level;
+
+        if (tags) {
+            const rawTags = Array.isArray(tags) ? tags.join(',') : String(tags);
+            const tagList = rawTags
+                .split(',')
+                .map((tag) => tag.trim())
+                .filter((tag) => tag.length > 0)
+                .map((tag) => tag.replace(/"/g, ''));
+
+            if (tagList.length > 0) {
+                const tagWhere = tagList.map((tag) =>
+                    where(
+                        fn('JSON_CONTAINS', col('tags'), fn('JSON_QUOTE', tag)),
+                        1
+                    )
+                );
+
+                if (whereClause[Op.and]) {
+                    whereClause[Op.and] = [
+                        ...whereClause[Op.and],
+                        { [Op.or]: tagWhere },
+                    ];
+                } else {
+                    whereClause[Op.and] = [{ [Op.or]: tagWhere }];
+                }
+            }
+        }
 
         const { count, rows } = await Course.findAndCountAll({
             where: whereClause,
-            attributes: ['id', 'title', 'slug', 'short_description', 'thumbnail', 'price', 'discounted_price', 'is_free', 'level', 'category', 'total_enrollments', 'rating', 'total_reviews'],
+            attributes: ['id', 'title', 'slug', 'short_description', 'thumbnail', 'price', 'discounted_price', 'is_free', 'validity_period', 'level', 'category', 'total_enrollments', 'rating', 'total_reviews'],
             limit: Number(limit),
             offset,
             order: [['created_at', 'DESC']],
@@ -431,6 +489,7 @@ export const updateCourse = async (req: AuthRequest, res: Response): Promise<voi
             level,
             outcomes,
             prerequisites,
+            tags,
             status,
             is_published,
             instructors,
@@ -473,6 +532,10 @@ export const updateCourse = async (req: AuthRequest, res: Response): Promise<voi
         if (prerequisites) {
             course.prerequisites = prerequisites;
             course.changed('prerequisites', true);
+        }
+        if (tags !== undefined) {
+            course.tags = Array.isArray(tags) ? tags : [];
+            course.changed('tags', true);
         }
         if (status) course.status = status;
         if (is_published !== undefined) course.is_published = is_published;
@@ -1472,5 +1535,268 @@ export const createLessonDiscussion = async (req: AuthRequest, res: Response): P
             status: 'error',
             message: error.message || 'Internal server error',
         });
+    }
+};
+
+// ========================================
+// ASSIGNMENT SUBMISSIONS CONTROLLERS
+// ========================================
+
+const getLessonCourseId = async (lessonId: number): Promise<number | null> => {
+    const lesson = await Lesson.findByPk(lessonId, {
+        include: [{
+            model: CourseSection,
+            as: 'section',
+            attributes: ['course_id'],
+        }],
+    });
+
+    if (!lesson) return null;
+    const section = lesson.get('section') as CourseSection | null;
+    return section?.course_id ?? null;
+};
+
+const isPrivilegedRole = (role?: string): boolean =>
+    role === 'admin' || role === 'teacher' || role === 'moderator';
+
+const isPdfUpload = (file: Express.Multer.File): boolean => {
+    const extension = path.extname(file.originalname).toLowerCase();
+    return extension === '.pdf' && file.mimetype === 'application/pdf';
+};
+
+export const submitAssignment = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const { lessonId } = req.params;
+        const userId = req.userId;
+
+        if (!userId) {
+            res.status(401).json({ status: 'error', message: 'Unauthorized' });
+            return;
+        }
+
+        const lessonIdNum = Number(lessonId);
+        if (!Number.isInteger(lessonIdNum) || lessonIdNum <= 0) {
+            res.status(400).json({ status: 'error', message: 'Invalid lesson ID' });
+            return;
+        }
+
+        if (!req.file) {
+            res.status(400).json({ status: 'error', message: 'Assignment PDF is required' });
+            return;
+        }
+
+        const lesson = await Lesson.findByPk(lessonIdNum);
+        if (!lesson) {
+            deleteFile(req.file.path);
+            res.status(404).json({ status: 'error', message: 'Lesson not found' });
+            return;
+        }
+
+        if (lesson.content_type !== 'assignment') {
+            deleteFile(req.file.path);
+            res.status(400).json({ status: 'error', message: 'Lesson is not an assignment type' });
+            return;
+        }
+
+        if (!isPdfUpload(req.file)) {
+            deleteFile(req.file.path);
+            res.status(400).json({ status: 'error', message: 'Only PDF files are allowed for assignment submission' });
+            return;
+        }
+
+        const courseId = await getLessonCourseId(lessonIdNum);
+        if (!courseId) {
+            deleteFile(req.file.path);
+            res.status(404).json({ status: 'error', message: 'Lesson section not found' });
+            return;
+        }
+
+        const enrollment = await Enrollment.findOne({
+            where: {
+                course_id: courseId,
+                student_id: userId,
+                status: { [Op.in]: ['active', 'completed'] },
+            },
+        });
+
+        if (!enrollment && !isPrivilegedRole(req.user?.role)) {
+            deleteFile(req.file.path);
+            res.status(403).json({ status: 'error', message: 'You are not enrolled in this course' });
+            return;
+        }
+
+        const relativePath = req.file.path
+            .split('uploads')[1]
+            .replace(/\\/g, '/')
+            .replace(/^\//, '');
+        const storagePath = `uploads/${relativePath}`;
+
+        const existingSubmission = await AssignmentSubmission.findOne({
+            where: { lesson_id: lessonIdNum, student_id: userId },
+        });
+
+        if (existingSubmission?.file_path) {
+            deleteFile(existingSubmission.file_path);
+        }
+
+        const payload = {
+            lesson_id: lessonIdNum,
+            student_id: userId,
+            file_path: storagePath,
+            file_name: req.file.originalname,
+            mime_type: req.file.mimetype,
+            file_size: req.file.size,
+            status: AssignmentSubmissionStatus.SUBMITTED,
+            submitted_at: new Date(),
+            reviewed_at: null,
+        };
+
+        const submission = existingSubmission
+            ? await existingSubmission.update(payload)
+            : await AssignmentSubmission.create(payload);
+
+        res.status(existingSubmission ? 200 : 201).json({
+            status: 'success',
+            message: existingSubmission
+                ? 'Assignment submission replaced successfully'
+                : 'Assignment submitted successfully',
+            data: submission,
+        });
+    } catch (error: any) {
+        console.error('Submit Assignment Error:', error);
+        if (req.file) deleteFile(req.file.path);
+        res.status(500).json({ status: 'error', message: error.message || 'Internal server error' });
+    }
+};
+
+export const getMyAssignmentSubmission = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const { lessonId } = req.params;
+        const userId = req.userId;
+
+        if (!userId) {
+            res.status(401).json({ status: 'error', message: 'Unauthorized' });
+            return;
+        }
+
+        const lessonIdNum = Number(lessonId);
+        if (!Number.isInteger(lessonIdNum) || lessonIdNum <= 0) {
+            res.status(400).json({ status: 'error', message: 'Invalid lesson ID' });
+            return;
+        }
+
+        const lesson = await Lesson.findByPk(lessonIdNum);
+        if (!lesson) {
+            res.status(404).json({ status: 'error', message: 'Lesson not found' });
+            return;
+        }
+
+        if (lesson.content_type !== 'assignment') {
+            res.status(400).json({ status: 'error', message: 'Lesson is not an assignment type' });
+            return;
+        }
+
+        const submission = await AssignmentSubmission.findOne({
+            where: { lesson_id: lessonIdNum, student_id: userId },
+        });
+
+        res.status(200).json({
+            status: 'success',
+            data: submission,
+        });
+    } catch (error: any) {
+        console.error('Get My Assignment Submission Error:', error);
+        res.status(500).json({ status: 'error', message: error.message || 'Internal server error' });
+    }
+};
+
+export const getAssignmentSubmissionsForTeacher = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const { lessonId } = req.params;
+        const lessonIdNum = Number(lessonId);
+
+        if (!Number.isInteger(lessonIdNum) || lessonIdNum <= 0) {
+            res.status(400).json({ status: 'error', message: 'Invalid lesson ID' });
+            return;
+        }
+
+        const lesson = await Lesson.findByPk(lessonIdNum);
+        if (!lesson) {
+            res.status(404).json({ status: 'error', message: 'Lesson not found' });
+            return;
+        }
+
+        if (lesson.content_type !== 'assignment') {
+            res.status(400).json({ status: 'error', message: 'Lesson is not an assignment type' });
+            return;
+        }
+
+        const submissions = await AssignmentSubmission.findAll({
+            where: { lesson_id: lessonIdNum },
+            include: [{
+                model: User,
+                as: 'student',
+                attributes: ['id', 'first_name', 'last_name', 'email', 'avatar'],
+            }],
+            order: [['submitted_at', 'DESC']],
+        });
+
+        res.status(200).json({
+            status: 'success',
+            data: submissions,
+        });
+    } catch (error: any) {
+        console.error('Get Assignment Submissions For Teacher Error:', error);
+        res.status(500).json({ status: 'error', message: error.message || 'Internal server error' });
+    }
+};
+
+export const reviewAssignmentSubmission = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const { submissionId } = req.params;
+        const { status, feedback, score } = req.body;
+
+        const submissionIdNum = Number(submissionId);
+        if (!Number.isInteger(submissionIdNum) || submissionIdNum <= 0) {
+            res.status(400).json({ status: 'error', message: 'Invalid submission ID' });
+            return;
+        }
+
+        const submission = await AssignmentSubmission.findByPk(submissionIdNum);
+        if (!submission) {
+            res.status(404).json({ status: 'error', message: 'Submission not found' });
+            return;
+        }
+
+        const nextStatus = status as AssignmentSubmissionStatus | undefined;
+        if (
+            nextStatus !== undefined
+            && !Object.values(AssignmentSubmissionStatus).includes(nextStatus)
+        ) {
+            res.status(400).json({ status: 'error', message: 'Invalid submission status' });
+            return;
+        }
+
+        if (nextStatus !== undefined) {
+            submission.status = nextStatus;
+        }
+        if (feedback !== undefined) {
+            submission.feedback = feedback;
+        }
+        if (score !== undefined) {
+            submission.score = score;
+        }
+
+        submission.reviewed_at = new Date();
+        await submission.save();
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Submission reviewed successfully',
+            data: submission,
+        });
+    } catch (error: any) {
+        console.error('Review Assignment Submission Error:', error);
+        res.status(500).json({ status: 'error', message: error.message || 'Internal server error' });
     }
 };

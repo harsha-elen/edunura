@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
@@ -15,6 +15,7 @@ interface Course {
     price: string;
     discounted_price: string;
     is_free: boolean;
+    validity_period?: number | null;
     level: string;
     category: string;
     total_enrollments: number;
@@ -33,6 +34,8 @@ interface Category {
     name: string;
     slug: string;
     parent_id?: number | null;
+    tags_enabled?: boolean;
+    tags?: string[] | string | null;
 }
 
 interface CoursesResponse {
@@ -77,18 +80,29 @@ const CourseCard = ({ course, siteName }: { course: Course; siteName: string }) 
         ? `${BACKEND_URL}${course.thumbnail.startsWith('/') ? '' : '/'}${course.thumbnail}`
         : null;
 
-    const displayPrice = course.is_free
+    const basePrice = parseFloat(course.price || '0');
+    const discountedPrice = parseFloat(course.discounted_price || '0');
+    const effectivePrice = !course.is_free && discountedPrice > 0 && basePrice > discountedPrice
+        ? discountedPrice
+        : basePrice;
+
+    const validityDays = Number(course.validity_period || 0);
+    const validityMonths = validityDays > 0 && validityDays % 30 === 0 ? validityDays / 30 : 0;
+    const monthlyPriceLabel =
+        !course.is_free && validityMonths >= 1
+            ? `₹${(effectivePrice / validityMonths).toLocaleString('en-IN', { maximumFractionDigits: 0 })}/month`
+            : null;
+
+    const headlinePrice = course.is_free
         ? 'Free'
-        : course.discounted_price && parseFloat(course.discounted_price) > 0
-            ? `₹${parseFloat(course.discounted_price).toLocaleString('en-IN')}`
-            : `₹${parseFloat(course.price).toLocaleString('en-IN')}`;
+        : monthlyPriceLabel || `₹${effectivePrice.toLocaleString('en-IN')}`;
 
     const originalPrice =
         !course.is_free &&
-        course.discounted_price &&
-        parseFloat(course.discounted_price) > 0 &&
-        parseFloat(course.price) > parseFloat(course.discounted_price)
-            ? `₹${parseFloat(course.price).toLocaleString('en-IN')}`
+        !monthlyPriceLabel &&
+        discountedPrice > 0 &&
+        basePrice > discountedPrice
+            ? `₹${basePrice.toLocaleString('en-IN')}`
             : null;
 
     return (
@@ -99,6 +113,8 @@ const CourseCard = ({ course, siteName }: { course: Course; siteName: string }) 
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         src={thumbnailUrl}
                         alt={course.title}
+                        width={1920}
+                        height={1080}
                     />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/10 to-primary/20">
@@ -144,13 +160,10 @@ const CourseCard = ({ course, siteName }: { course: Course; siteName: string }) 
                         </div>
                     )}
                     <span className="text-xs font-medium text-slate-600 font-display">{instructorName}</span>
-                    {course.total_enrollments > 0 && (
-                        <span className="text-xs text-slate-400 ml-auto">{course.total_enrollments.toLocaleString()} enrolled</span>
-                    )}
                 </div>
                 <div className="flex items-center justify-between pt-4 border-t border-slate-100">
                     <div>
-                        <span className="text-xl font-bold text-slate-900 font-display">{displayPrice}</span>
+                        <span className="text-xl font-bold text-slate-900 font-display">{headlinePrice}</span>
                         {originalPrice && (
                             <span className="text-xs text-slate-400 line-through ml-2 font-display">{originalPrice}</span>
                         )}
@@ -174,6 +187,7 @@ const CoursesPage = () => {
     const [error, setError] = useState<string | null>(null);
     const [search, setSearch] = useState('');
     const [searchInput, setSearchInput] = useState('');
+    const [selectedTags, setSelectedTags] = useState<string[]>([]);
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [total, setTotal] = useState(0);
@@ -204,7 +218,7 @@ const CoursesPage = () => {
             .catch(() => {});
     }, []);
 
-    const fetchCourses = useCallback(async (searchTerm: string, pageNum: number, categoryFilter: string | null) => {
+    const fetchCourses = useCallback(async (searchTerm: string, pageNum: number, categoryFilter: string | null, tagFilters: string[]) => {
         if (pageNum === 1) {
             setCourses([]); // Clear grid immediately when switching categories/searching
         }
@@ -217,6 +231,7 @@ const CoursesPage = () => {
             });
             if (searchTerm.trim()) params.append('search', searchTerm.trim());
             if (categoryFilter) params.append('category', categoryFilter);
+            if (tagFilters.length > 0) params.append('tags', tagFilters.join(','));
 
             const res = await fetch(`${API_URL}/courses/public?${params.toString()}`);
             if (!res.ok) throw new Error(`Failed to fetch courses (${res.status})`);
@@ -240,21 +255,46 @@ const CoursesPage = () => {
 
     const parentCategories = categories.filter(c => !c.parent_id);
     const childCategories = activeParent ? categories.filter(c => c.parent_id === activeParent.id) : [];
-    const selectedCategoryName = activeChild ? activeChild.name : (activeParent ? activeParent.name : null);
+    const selectedCategoryFilter = activeChild ? activeChild.slug : (activeParent ? activeParent.slug : null);
+    const selectedCategory = activeChild || activeParent;
+
+    const availableTags = useMemo(() => {
+        if (!selectedCategory || !selectedCategory.tags_enabled || !selectedCategory.tags) return [];
+
+        let parsedTags: string[] = [];
+        if (typeof selectedCategory.tags === 'string') {
+            try {
+                const decoded = JSON.parse(selectedCategory.tags);
+                parsedTags = Array.isArray(decoded) ? decoded : [];
+            } catch {
+                parsedTags = [];
+            }
+        } else if (Array.isArray(selectedCategory.tags)) {
+            parsedTags = selectedCategory.tags;
+        }
+
+        const cleaned = parsedTags
+            .map((tag) => String(tag).trim())
+            .filter((tag) => tag.length > 0);
+
+        return Array.from(new Set(cleaned));
+    }, [selectedCategory]);
 
     const handleParentClick = (cat: Category | null) => {
         setActiveParent(cat);
         setActiveChild(null); // Reset child when changing parent
+        setSelectedTags([]);
     };
 
     const handleChildClick = (cat: Category | null) => {
         setActiveChild(cat);
+        setSelectedTags([]);
     };
 
     useEffect(() => {
         setPage(1);
-        fetchCourses(search, 1, selectedCategoryName);
-    }, [search, selectedCategoryName, fetchCourses]);
+        fetchCourses(search, 1, selectedCategoryFilter, selectedTags);
+    }, [search, selectedCategoryFilter, selectedTags, fetchCourses]);
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
@@ -264,7 +304,7 @@ const CoursesPage = () => {
     const handleLoadMore = () => {
         const nextPage = page + 1;
         setPage(nextPage);
-        fetchCourses(search, nextPage, selectedCategoryName);
+        fetchCourses(search, nextPage, selectedCategoryFilter, selectedTags);
     };
 
     return (
@@ -299,7 +339,7 @@ const CoursesPage = () => {
                             <p className="text-red-500 font-semibold mb-2">Failed to load courses</p>
                             <p className="text-slate-400 text-sm mb-6">{error}</p>
                             <button
-                                onClick={() => fetchCourses(search, 1, selectedCategoryName)}
+                                onClick={() => fetchCourses(search, 1, selectedCategoryFilter, selectedTags)}
                                 className="bg-primary text-white px-6 py-2 rounded-lg font-bold hover:bg-orange-600 transition-colors text-sm"
                             >
                                 Try Again
@@ -365,53 +405,101 @@ const CoursesPage = () => {
                         </div>
                     )}
 
-                    {/* Course Grid */}
-                    {!error && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-in fade-in duration-500">
-                            {courses.map((course) => (
-                                <CourseCard key={course.id} course={course} siteName={siteName} />
-                            ))}
-                            {loading && Array.from({ length: page === 1 ? 6 : 3 }).map((_, i) => (
-                                <SkeletonCard key={`skeleton-${i}`} />
-                            ))}
-                        </div>
-                    )}
+                    {/* Tags + Course Content (under tabs) */}
+                    <div className="mt-3 flex flex-col gap-5 lg:flex-row lg:items-start">
+                        {selectedCategory && availableTags.length > 0 && (
+                            <aside className="lg:sticky lg:top-24 lg:w-64 lg:flex-shrink-0 rounded-xl border border-slate-200 bg-white p-4">
+                                <div className="mb-3 flex items-center justify-between">
+                                    <p className="text-sm font-semibold text-slate-800">Filter by tags</p>
+                                    {selectedTags.length > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setSelectedTags([])}
+                                            className="text-xs font-semibold text-primary hover:underline"
+                                        >
+                                            Clear
+                                        </button>
+                                    )}
+                                </div>
 
-                    {/* Empty State */}
-                    {!loading && !error && courses.length === 0 && (
-                        <div className="flex flex-col items-center justify-center py-24 text-center">
-                            <span className="material-symbols-outlined text-slate-300 text-7xl mb-4">school</span>
-                            <h3 className="text-xl font-bold text-slate-700 mb-2">No courses found</h3>
-                            <p className="text-slate-400 text-sm">
-                                {search
-                                    ? `No results for "${search}". Try a different search.`
-                                    : 'No published courses available yet. Check back soon!'}
-                            </p>
-                            {search && (
-                                <button
-                                    onClick={() => { setSearchInput(''); setSearch(''); }}
-                                    className="mt-4 text-primary font-bold text-sm hover:underline"
-                                >
-                                    Clear search
-                                </button>
+                                <p className="mb-3 text-xs text-slate-500">{selectedCategory.name}</p>
+
+                                <div className="max-h-[420px] space-y-2 overflow-y-auto pr-1">
+                                    {availableTags.map((tag) => {
+                                        const isSelected = selectedTags.includes(tag);
+                                        return (
+                                            <button
+                                                key={tag}
+                                                type="button"
+                                                onClick={() => {
+                                                    setSelectedTags((prev) => (
+                                                        prev.includes(tag) ? [] : [tag]
+                                                    ));
+                                                }}
+                                                className={`w-full rounded-lg border px-3 py-2 text-left text-xs font-semibold transition-colors ${
+                                                    isSelected
+                                                        ? 'border-primary bg-primary text-white shadow-sm'
+                                                        : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-primary/30 hover:bg-slate-100'
+                                                }`}
+                                            >
+                                                {tag}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </aside>
+                        )}
+
+                        <div className="min-w-0 flex-1">
+                            {/* Course Grid */}
+                            {!error && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-in fade-in duration-500">
+                                    {courses.map((course) => (
+                                        <CourseCard key={course.id} course={course} siteName={siteName} />
+                                    ))}
+                                    {loading && Array.from({ length: page === 1 ? 6 : 3 }).map((_, i) => (
+                                        <SkeletonCard key={`skeleton-${i}`} />
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Empty State */}
+                            {!loading && !error && courses.length === 0 && (
+                                <div className="flex flex-col items-center justify-center py-24 text-center">
+                                    <span className="material-symbols-outlined text-slate-300 text-7xl mb-4">school</span>
+                                    <h3 className="text-xl font-bold text-slate-700 mb-2">No courses found</h3>
+                                    <p className="text-slate-400 text-sm">
+                                        {search
+                                            ? `No results for "${search}". Try a different search.`
+                                            : 'No published courses available yet. Check back soon!'}
+                                    </p>
+                                    {search && (
+                                        <button
+                                            onClick={() => { setSearchInput(''); setSearch(''); }}
+                                            className="mt-4 text-primary font-bold text-sm hover:underline"
+                                        >
+                                            Clear search
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Load More */}
+                            {!loading && !error && courses.length > 0 && page < totalPages && (
+                                <div className="mt-12 flex flex-col items-center gap-4">
+                                    <button
+                                        onClick={handleLoadMore}
+                                        className="bg-white border-2 border-primary text-primary hover:bg-primary hover:text-white transition-all px-12 py-3 rounded-xl font-bold text-lg shadow-sm font-display"
+                                    >
+                                        Load More Courses
+                                    </button>
+                                    <p className="text-slate-500 text-sm italic">
+                                        Showing {courses.length} of {total} courses
+                                    </p>
+                                </div>
                             )}
                         </div>
-                    )}
-
-                    {/* Load More */}
-                    {!loading && !error && courses.length > 0 && page < totalPages && (
-                        <div className="mt-12 flex flex-col items-center gap-4">
-                            <button
-                                onClick={handleLoadMore}
-                                className="bg-white border-2 border-primary text-primary hover:bg-primary hover:text-white transition-all px-12 py-3 rounded-xl font-bold text-lg shadow-sm font-display"
-                            >
-                                Load More Courses
-                            </button>
-                            <p className="text-slate-500 text-sm italic">
-                                Showing {courses.length} of {total} courses
-                            </p>
-                        </div>
-                    )}
+                    </div>
                 </div>
             </div>
         </main>

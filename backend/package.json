@@ -10,6 +10,8 @@
         "db:setup": "ts-node src/scripts/setupDatabase.ts",
         "db:seed": "ts-node src/scripts/seedAdminUser.ts",
         "db:migrate": "node dist/database/migrate.js",
+        "db:migrate:pending": "ts-node src/scripts/runPendingMigrations.ts",
+        "db:migrate:file": "ts-node src/scripts/runMigration.ts",
         "db:migrate-file-path": "ts-node src/scripts/addFilePathColumn.ts",
         "db:migrate-start-time": "ts-node src/scripts/addStartTimeColumn.ts",
         "db:add-instructors": "ts-node src/scripts/addInstructorsColumn.ts"

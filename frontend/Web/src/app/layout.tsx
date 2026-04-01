@@ -41,7 +41,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className={`${inter.variable} ${poppins.variable} ${quicksand.variable} antialiased`}>
+      <body suppressHydrationWarning className={`${inter.variable} ${poppins.variable} ${quicksand.variable} antialiased`}>
         <Providers>
           {children}
         </Providers>

@@ -12,6 +12,8 @@ interface CourseCategoryAttributes {
     accent_color?: string;
     course_count: number;
     display_order: number;
+    tags_enabled: boolean;
+    tags?: string[];
     is_featured: boolean;
     is_active: boolean;
     created_at?: Date;
@@ -33,6 +35,8 @@ class CourseCategory extends Model<CourseCategoryAttributes, CourseCategoryCreat
     public accent_color?: string;
     public course_count!: number;
     public display_order!: number;
+    public tags_enabled!: boolean;
+    public tags?: string[];
     public is_featured!: boolean;
     public is_active!: boolean;
 
@@ -96,6 +100,16 @@ CourseCategory.init(
             type: DataTypes.INTEGER,
             defaultValue: 0,
             comment: 'Order for displaying categories',
+        },
+        tags_enabled: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false,
+            comment: 'Enable tags for this category',
+        },
+        tags: {
+            type: DataTypes.JSON,
+            allowNull: true,
+            comment: 'Ordered tags list for this category',
         },
         is_featured: {
             type: DataTypes.BOOLEAN,

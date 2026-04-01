@@ -133,7 +133,7 @@ export const createStudent = async (req: Request, res: Response) => {
 export const updateStudent = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const { email, first_name, last_name, phone, is_active, password } = req.body;
+        const { email, first_name, last_name, phone, is_active, password, is_verified } = req.body;
 
         const student = await User.findOne({
             where: {
@@ -164,6 +164,7 @@ export const updateStudent = async (req: Request, res: Response) => {
         if (last_name) student.last_name = last_name;
         if (phone !== undefined) student.phone = phone;
         if (is_active !== undefined) student.is_active = is_active;
+        if (is_verified !== undefined) student.is_verified = is_verified;
         if (password) student.password = password;
 
         await student.save();

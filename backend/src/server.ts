@@ -17,6 +17,7 @@ import courseRoutes from './modules/courses/routes';
 import liveClassRoutes from './modules/live-classes/routes';
 import enrollmentRoutes from './modules/enrollments/routes';
 import paymentRoutes from './modules/payments/routes';
+import quizRoutes from './modules/quiz/routes';
 import { initializeAssociations } from './models';
 import { seedAdminIfNeeded } from './scripts/seedAdminUser';
 
@@ -99,6 +100,7 @@ app.use('/api/courses', courseRoutes);
 app.use('/api/live-classes', liveClassRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api', enrollmentRoutes);
+app.use('/api', quizRoutes);
 
 app.get('/api', (_req: Request, res: Response) => {
     res.status(200).json({
@@ -113,6 +115,7 @@ app.get('/api', (_req: Request, res: Response) => {
             'Payments (Razorpay)',
             'Enrollment',
             'Assessment',
+            'Quiz',
             'Notifications',
             'Reporting',
             'Discussion',

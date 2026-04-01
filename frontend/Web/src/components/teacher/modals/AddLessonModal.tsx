@@ -10,12 +10,12 @@ import {
     Typography,
     Paper,
     IconButton,
-    TextField,
 } from '@mui/material';
 import {
     PlayCircleOutlined as PlayCircleOutlinedIcon,
     DescriptionOutlined as DescriptionOutlinedIcon,
     Quiz as QuizIcon,
+    AssignmentTurnedIn as AssignmentTurnedInIcon,
     VideocamOutlined as VideocamOutlinedIcon,
     Close as CloseIcon,
     ChevronRight as ChevronRightIcon,
@@ -23,13 +23,15 @@ import {
 import VideoLessonUpload from '@/components/teacher/lessons/VideoLessonUpload';
 import TextMediaLessonUpload from '@/components/teacher/lessons/TextMediaLessonUpload';
 import LiveClassLessonUpload from '@/components/teacher/lessons/LiveClassLessonUpload';
+import QuizLessonUpload from '@/components/shared/QuizLessonUpload';
+import { getQuizQuestionsForTeacher } from '@/services/courseService';
 
 interface AddLessonModalProps {
     open: boolean;
     onClose: () => void;
     onAdd: (lessonData: {
         title: string;
-        type: 'video' | 'document' | 'text' | 'quiz' | 'live';
+        type: 'video' | 'document' | 'text' | 'quiz' | 'live' | 'assignment';
         meta: string;
         description?: string;
         videoType?: 'upload' | 'url';
@@ -39,6 +41,15 @@ interface AddLessonModalProps {
         allowPreview?: boolean;
         resourceFiles?: File[];
         resourcesToDelete?: number[];
+        quizQuestions?: Array<{
+            id?: number;
+            question_text: string;
+            question_type: 'multiple_choice' | 'true_false' | 'short_answer';
+            options?: string[];
+            correct_answer: string;
+            explanation?: string;
+            order: number;
+        }>;
     }) => void;
     uploadProgress?: number;
     uploadError?: string;
@@ -85,6 +96,14 @@ const LESSON_TYPES = [
         iconColor: '#8B5CF6',
     },
     {
+        id: 'assignment' as const,
+        icon: AssignmentTurnedInIcon,
+        title: 'Assignment',
+        description: 'Create assignment briefs and collect student PDF submissions.',
+        bgColor: '#fff6d8',
+        iconColor: '#b45309',
+    },
+    {
         id: 'live' as const,
         icon: VideocamOutlinedIcon,
         title: 'Live Session',
@@ -94,7 +113,7 @@ const LESSON_TYPES = [
     },
 ];
 
-type Phase = 'type-selector' | 'video' | 'text' | 'quiz' | 'live';
+type Phase = 'type-selector' | 'video' | 'text' | 'quiz' | 'live' | 'assignment';
 
 const AddLessonModal: React.FC<AddLessonModalProps> = ({
     open,
@@ -108,7 +127,7 @@ const AddLessonModal: React.FC<AddLessonModalProps> = ({
 }) => {
     const isEditMode = !!initialData;
     const [phase, setPhase] = useState<Phase>('type-selector');
-    const [quizTitle, setQuizTitle] = useState('');
+    const [quizInitialQuestions, setQuizInitialQuestions] = useState<any[]>([]);
 
     // When modal opens, set initial phase based on mode
     useEffect(() => {
@@ -117,23 +136,42 @@ const AddLessonModal: React.FC<AddLessonModalProps> = ({
                 const t = initialData.type;
                 if (t === 'video' || t === 'text' || t === 'live') {
                     setPhase(t as Phase);
+                } else if (t === 'assignment') {
+                    setPhase('assignment');
                 } else if (t === 'quiz' || t === 'document') {
                     setPhase('quiz');
-                    setQuizTitle(initialData.title || '');
                 } else {
                     setPhase('type-selector');
                 }
             } else {
                 setPhase('type-selector');
-                setQuizTitle('');
             }
         }
     }, [open, isEditMode, initialData]);
 
-    const handleTypeSelect = (typeId: 'video' | 'document' | 'text' | 'quiz' | 'live') => {
+    useEffect(() => {
+        const loadQuizQuestions = async () => {
+            if (!open || !isEditMode || !initialData || initialData.type !== 'quiz' || !initialData.id || !courseId) {
+                setQuizInitialQuestions([]);
+                return;
+            }
+
+            try {
+                const response = await getQuizQuestionsForTeacher(courseId, initialData.id);
+                setQuizInitialQuestions(response?.data || []);
+            } catch {
+                setQuizInitialQuestions([]);
+            }
+        };
+
+        void loadQuizQuestions();
+    }, [open, isEditMode, initialData, courseId]);
+
+    const handleTypeSelect = (typeId: 'video' | 'document' | 'text' | 'quiz' | 'live' | 'assignment') => {
         if (typeId === 'quiz' || typeId === 'document') {
-            setQuizTitle('New Quiz');
             setPhase('quiz');
+        } else if (typeId === 'assignment') {
+            setPhase('assignment');
         } else {
             setPhase(typeId as Phase);
         }
@@ -166,10 +204,10 @@ const AddLessonModal: React.FC<AddLessonModalProps> = ({
     const handleTextSave = (data: {
         title: string; description: string; allowPreview: boolean;
         resources: any[]; resourceFiles: File[]; resourcesToDelete: number[];
-    }) => {
+    }, lessonType: 'text' | 'assignment' = 'text') => {
         onAdd({
             title: data.title,
-            type: 'text',
+            type: lessonType,
             meta: 'text',
             description: data.description,
             allowPreview: data.allowPreview,
@@ -178,10 +216,27 @@ const AddLessonModal: React.FC<AddLessonModalProps> = ({
         });
     };
 
-    // ── Quiz save (simple title-only) ───────────────────────────────────────
-    const handleQuizSave = () => {
-        const t = (isEditMode ? initialData?.type : 'quiz') as 'quiz';
-        onAdd({ title: quizTitle.trim() || 'New Quiz', type: t, meta: 'quiz' });
+    // ── Quiz save bridge ─────────────────────────────────────────────────────
+    const handleQuizSave = (data: {
+        title: string;
+        questions: Array<{
+            id?: number;
+            question_text: string;
+            question_type: 'multiple_choice' | 'true_false' | 'short_answer';
+            options?: string[];
+            correct_answer: string;
+            explanation?: string;
+            order: number;
+        }>;
+    }) => {
+        onAdd({
+            title: data.title,
+            type: 'quiz',
+            meta: JSON.stringify({
+                questions: data.questions,
+            }),
+            quizQuestions: data.questions,
+        });
     };
 
     // ── Live success ─────────────────────────────────────────────────────────
@@ -258,6 +313,42 @@ const AddLessonModal: React.FC<AddLessonModalProps> = ({
         );
     }
 
+    if (open && phase === 'quiz') {
+        return (
+            <QuizLessonUpload
+                open={true}
+                onClose={onClose}
+                onBack={isEditMode ? undefined : goBackToSelector}
+                onSave={handleQuizSave}
+                initialData={{
+                    title: initialData?.title || '',
+                    questions: quizInitialQuestions,
+                }}
+            />
+        );
+    }
+
+    if (open && phase === 'assignment') {
+        const assignmentInitialData = isEditMode && initialData && initialData.type === 'assignment' ? {
+            lessonId: initialData.id,
+            title: initialData.title,
+            description: initialData.description || '',
+            allowPreview: initialData.allowPreview || false,
+            resources: initialData.resources || [],
+        } : undefined;
+
+        return (
+            <TextMediaLessonUpload
+                open={true}
+                onClose={onClose}
+                onBack={isEditMode ? onClose : goBackToSelector}
+                onSave={(data) => handleTextSave(data, 'assignment')}
+                lessonKind="assignment"
+                initialData={assignmentInitialData}
+            />
+        );
+    }
+
     // ── Main dialog: type selector or quiz form ───────────────────────────────
     return (
         <Dialog
@@ -277,10 +368,10 @@ const AddLessonModal: React.FC<AddLessonModalProps> = ({
             <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', px: 3, py: 2.5, borderBottom: '1px solid #e2e8f0' }}>
                 <Box>
                     <Typography variant="h6" sx={{ fontWeight: 600, color: '#1e293b', fontSize: '1.125rem' }}>
-                        {phase === 'quiz' ? (isEditMode ? 'Edit Quiz' : 'Quiz & Assessment') : 'Add New Lesson'}
+                        Add New Lesson
                     </Typography>
                     <Typography variant="caption" sx={{ color: '#64748b', mt: 0.5, display: 'block', fontSize: '0.875rem' }}>
-                        {phase === 'quiz' ? 'Quiz builder coming soon — set a title to save.' : 'Select the type of content you want to create.'}
+                        Select the type of content you want to create.
                     </Typography>
                 </Box>
                 <IconButton size="small" onClick={onClose} sx={{ color: '#94a3b8', '&:hover': { color: '#475569', bgcolor: 'rgba(226,232,240,0.5)' } }}>
@@ -290,81 +381,45 @@ const AddLessonModal: React.FC<AddLessonModalProps> = ({
 
             {/* Content */}
             <DialogContent sx={{ p: 3, bgcolor: '#ffffff' }}>
-                {phase === 'quiz' ? (
-                    <Box>
-                        <Typography variant="caption" sx={{ fontWeight: 500, color: '#475569', mb: 1, display: 'block' }}>Quiz Title</Typography>
-                        <TextField
-                            fullWidth
-                            size="small"
-                            autoFocus
-                            value={quizTitle}
-                            onChange={e => setQuizTitle(e.target.value)}
-                            placeholder="Enter quiz title"
-                            inputProps={{ maxLength: 200 }}
-                            sx={{ '& .MuiOutlinedInput-root': { borderRadius: '0.5rem', fontSize: '0.9375rem', '&:hover fieldset': { borderColor: '#8B5CF6' }, '&.Mui-focused fieldset': { borderColor: '#8B5CF6' } } }}
-                        />
-                        <Box sx={{ mt: 2, p: 1.5, bgcolor: '#f8fafc', borderRadius: '0.5rem', border: '1px solid #e2e8f0' }}>
-                            <Typography variant="caption" sx={{ color: '#64748b', fontSize: '0.8125rem' }}>
-                                Full quiz editor with questions, options and grading will be available after saving.
-                            </Typography>
-                        </Box>
-                    </Box>
-                ) : (
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                        {LESSON_TYPES.map((type) => {
-                            const Icon = type.icon;
-                            return (
-                                <Paper
-                                    key={type.id}
-                                    onClick={() => handleTypeSelect(type.id)}
-                                    elevation={0}
-                                    sx={{
-                                        display: 'flex', alignItems: 'flex-start', gap: 2, p: 2,
-                                        borderRadius: '0.75rem', cursor: 'pointer', border: '1px solid transparent',
-                                        transition: 'all 0.15s ease-in-out', bgcolor: '#ffffff',
-                                        '&:hover': { bgcolor: type.bgColor, borderColor: type.iconColor + '40' },
-                                    }}
-                                >
-                                    <Box sx={{ flexShrink: 0, width: 48, height: 48, borderRadius: '0.5rem', bgcolor: type.bgColor, display: 'flex', alignItems: 'center', justifyContent: 'center', color: type.iconColor }}>
-                                        <Icon sx={{ fontSize: 24 }} />
-                                    </Box>
-                                    <Box sx={{ flex: 1 }}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                            <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b', fontSize: '0.9375rem' }}>
-                                                {type.title}
-                                            </Typography>
-                                            <ChevronRightIcon sx={{ color: '#cbd5e1', fontSize: 20, ml: 2, flexShrink: 0 }} />
-                                        </Box>
-                                        <Typography variant="caption" sx={{ color: '#64748b', mt: 0.5, display: 'block', fontSize: '0.8125rem', lineHeight: 1.4 }}>
-                                            {type.description}
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    {LESSON_TYPES.map((type) => {
+                        const Icon = type.icon;
+                        return (
+                            <Paper
+                                key={type.id}
+                                onClick={() => handleTypeSelect(type.id)}
+                                elevation={0}
+                                sx={{
+                                    display: 'flex', alignItems: 'flex-start', gap: 2, p: 2,
+                                    borderRadius: '0.75rem', cursor: 'pointer', border: '1px solid transparent',
+                                    transition: 'all 0.15s ease-in-out', bgcolor: '#ffffff',
+                                    '&:hover': { bgcolor: type.bgColor, borderColor: type.iconColor + '40' },
+                                }}
+                            >
+                                <Box sx={{ flexShrink: 0, width: 48, height: 48, borderRadius: '0.5rem', bgcolor: type.bgColor, display: 'flex', alignItems: 'center', justifyContent: 'center', color: type.iconColor }}>
+                                    <Icon sx={{ fontSize: 24 }} />
+                                </Box>
+                                <Box sx={{ flex: 1 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <Typography variant="body2" sx={{ fontWeight: 600, color: '#1e293b', fontSize: '0.9375rem' }}>
+                                            {type.title}
                                         </Typography>
+                                        <ChevronRightIcon sx={{ color: '#cbd5e1', fontSize: 20, ml: 2, flexShrink: 0 }} />
                                     </Box>
-                                </Paper>
-                            );
-                        })}
-                    </Box>
-                )}
+                                    <Typography variant="caption" sx={{ color: '#64748b', mt: 0.5, display: 'block', fontSize: '0.8125rem', lineHeight: 1.4 }}>
+                                        {type.description}
+                                    </Typography>
+                                </Box>
+                            </Paper>
+                        );
+                    })}
+                </Box>
             </DialogContent>
 
             <DialogActions sx={{ px: 3, py: 2, bgcolor: '#f8fafc', borderTop: '1px solid #e2e8f0', gap: 1 }}>
-                {phase === 'quiz' && !isEditMode && (
-                    <Button onClick={goBackToSelector} sx={{ textTransform: 'none', fontWeight: 500, fontSize: '0.875rem', color: '#64748b', px: 2, py: 0.75, mr: 'auto', '&:hover': { bgcolor: '#e2e8f0' } }}>
-                        ← Back
-                    </Button>
-                )}
                 <Button onClick={onClose} sx={{ textTransform: 'none', fontWeight: 500, fontSize: '0.875rem', color: '#64748b', px: 2, py: 0.75, '&:hover': { bgcolor: '#e2e8f0' } }}>
                     Cancel
                 </Button>
-                {phase === 'quiz' && (
-                    <Button
-                        onClick={handleQuizSave}
-                        variant="contained"
-                        disabled={!quizTitle.trim()}
-                        sx={{ textTransform: 'none', fontWeight: 600, fontSize: '0.875rem', bgcolor: '#8B5CF6', color: '#ffffff', px: 2.5, py: 0.75, borderRadius: '0.5rem', '&:hover': { bgcolor: '#7C3AED' }, '&.Mui-disabled': { bgcolor: '#e2e8f0', color: '#94a3b8' } }}
-                    >
-                        Save Quiz
-                    </Button>
-                )}
             </DialogActions>
         </Dialog>
     );

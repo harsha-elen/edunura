@@ -35,6 +35,7 @@ export interface AuthResponse {
         token?: string;
         refreshToken?: string;
         requires2FA?: boolean;
+        requiresEmailVerification?: boolean;
         tempToken?: string;
         status?: string;
         email?: string;

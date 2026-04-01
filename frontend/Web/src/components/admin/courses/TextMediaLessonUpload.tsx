@@ -45,6 +45,7 @@ interface TextMediaLessonUploadProps {
         allowPreview: boolean;
         resources: Array<{ id?: number; name: string; size: string; type: string }>;
     };
+    lessonKind?: 'text' | 'assignment';
 }
 
 interface UploadedFile {
@@ -54,7 +55,7 @@ interface UploadedFile {
     type: string;
 }
 
-const TextMediaLessonUpload: React.FC<TextMediaLessonUploadProps> = ({ open, onClose, onBack, onSave, initialData }) => {
+const TextMediaLessonUpload: React.FC<TextMediaLessonUploadProps> = ({ open, onClose, onBack, onSave, initialData, lessonKind = 'text' }) => {
     const theme = useTheme();
     const [title, setTitle] = useState(initialData?.title || '');
     const [description, setDescription] = useState(initialData?.description || '');
@@ -78,8 +79,16 @@ const TextMediaLessonUpload: React.FC<TextMediaLessonUploadProps> = ({ open, onC
     const allowPreviewRef = useRef(allowPreview);
 
     const draftKey = useMemo(() => {
+        if (lessonKind === 'assignment') {
+            return lessonId ? `assignment-lesson-draft-${lessonId}` : 'assignment-lesson-draft-new';
+        }
         return lessonId ? `text-lesson-draft-${lessonId}` : 'text-lesson-draft-new';
-    }, [lessonId]);
+    }, [lessonId, lessonKind]);
+
+    const lessonTitle = lessonKind === 'assignment' ? 'Assignment Lesson' : 'Text Lesson';
+    const lessonSubtitle = lessonKind === 'assignment'
+        ? 'Create assignment instructions and attachments for student submissions'
+        : 'Add rich text content and attachment to your lesson';
 
     useEffect(() => { titleRef.current = title; }, [title]);
     useEffect(() => { allowPreviewRef.current = allowPreview; }, [allowPreview]);
@@ -390,10 +399,10 @@ const TextMediaLessonUpload: React.FC<TextMediaLessonUploadProps> = ({ open, onC
                         )}
                         <Box>
                             <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
-                                {initialData ? 'Edit Text Lesson' : 'Create Text Lesson'}
+                                {initialData ? `Edit ${lessonTitle}` : `Create ${lessonTitle}`}
                             </Typography>
                             <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 500 }}>
-                                Add rich text content and attachment to your lesson
+                                {lessonSubtitle}
                             </Typography>
                         </Box>
                     </Box>

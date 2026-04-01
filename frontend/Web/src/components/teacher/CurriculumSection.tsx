@@ -27,6 +27,7 @@ import {
     PlayCircleOutlined as PlayCircleIcon,
     DescriptionOutlined as DescriptionIcon,
     Quiz as QuizIcon,
+    AssignmentTurnedIn as AssignmentTurnedInIcon,
     VideocamOutlined as VideocamIcon,
     AddCircle as AddCircleIcon,
     AddBox as AddBoxIcon,
@@ -50,13 +51,17 @@ import {
     uploadLessonVideo,
     uploadLessonResource,
     deleteLessonResource,
+    createQuizQuestion,
+    getQuizQuestionsForTeacher,
+    updateQuizQuestion,
+    deleteQuizQuestion,
 } from '@/services/courseService';
 import DripSettingsModal from '@/components/admin/courses/DripSettingsModal';
 
 interface Lesson {
     id: number;
     title: string;
-    type: 'video' | 'document' | 'text' | 'quiz' | 'live';
+    type: 'video' | 'document' | 'text' | 'quiz' | 'live' | 'assignment';
     meta: string;
     duration?: number;
     content_type: string;
@@ -110,6 +115,7 @@ const generateLessonMeta = (lesson: any): string => {
         case 'document': return `${typeLabel} • Document`;
         case 'text': return `${typeLabel} • Reading Material`;
         case 'quiz': return `${typeLabel} • Assessment`;
+        case 'assignment': return `${typeLabel} • PDF Submission`;
         default: return typeLabel;
     }
 };
@@ -325,7 +331,7 @@ const CurriculumSection: React.FC<CurriculumSectionProps> = ({ courseId }) => {
 
     const handleSaveLesson = async (lessonData: {
         title: string;
-        type: 'video' | 'document' | 'text' | 'quiz' | 'live';
+        type: 'video' | 'document' | 'text' | 'quiz' | 'live' | 'assignment';
         meta: string;
         description?: string;
         videoType?: 'upload' | 'url';
@@ -335,9 +341,37 @@ const CurriculumSection: React.FC<CurriculumSectionProps> = ({ courseId }) => {
         allowPreview?: boolean;
         resourceFiles?: File[];
         resourcesToDelete?: number[];
+        quizQuestions?: Array<{
+            id?: number;
+            question_text: string;
+            question_type: 'multiple_choice' | 'true_false' | 'short_answer';
+            options?: string[];
+            correct_answer: string;
+            explanation?: string;
+            order: number;
+        }>;
     }) => {
         if (!selectedModuleId) return;
         try {
+            let quizMeta: {
+                allowPreview?: boolean;
+                questions?: Array<{
+                    question_text: string;
+                    question_type: 'multiple_choice' | 'true_false' | 'short_answer';
+                    options?: string[];
+                    correct_answer: string;
+                    explanation?: string;
+                    order: number;
+                }>;
+            } = {};
+            if (lessonData.type === 'quiz' && lessonData.meta) {
+                try {
+                    quizMeta = JSON.parse(lessonData.meta);
+                } catch {
+                    quizMeta = {};
+                }
+            }
+
             const lessonPayload: any = {
                 title: lessonData.title,
                 content_type: lessonData.type,
@@ -349,12 +383,67 @@ const CurriculumSection: React.FC<CurriculumSectionProps> = ({ courseId }) => {
                 lessonPayload.file_path = lessonData.videoUrl;
             } else if (lessonData.type === 'text') {
                 lessonPayload.content_body = lessonData.description || '';
+            } else if (lessonData.type === 'quiz') {
+                lessonPayload.content_body = 'Quiz lesson';
+                lessonPayload.is_free_preview = lessonData.allowPreview ?? quizMeta.allowPreview ?? false;
+            } else if (lessonData.type === 'assignment') {
+                let assignmentMeta: { description?: string; allowPreview?: boolean } = {};
+                try {
+                    assignmentMeta = lessonData.meta ? JSON.parse(lessonData.meta) : {};
+                } catch {
+                    assignmentMeta = {};
+                }
+                lessonPayload.content_body = lessonData.description || assignmentMeta.description || '';
+                lessonPayload.is_free_preview = lessonData.allowPreview ?? assignmentMeta.allowPreview ?? false;
             }
 
             let lessonId: number;
             if (editingLesson) {
                 await updateLesson(editingLesson.id, lessonPayload);
                 lessonId = editingLesson.id;
+
+                if (lessonData.type === 'quiz' && lessonData.quizQuestions) {
+                    const existingResponse = await getQuizQuestionsForTeacher(courseId, lessonId);
+                    const existingQuestions: Array<{ id: number }> = existingResponse?.data || [];
+                    const incomingById = new Map<number, typeof lessonData.quizQuestions[number]>();
+
+                    for (const question of lessonData.quizQuestions) {
+                        if (typeof question.id === 'number') {
+                            incomingById.set(question.id, question);
+                        }
+                    }
+
+                    for (const existing of existingQuestions) {
+                        const incoming = incomingById.get(existing.id);
+                        if (!incoming) {
+                            await deleteQuizQuestion(courseId, lessonId, existing.id);
+                            continue;
+                        }
+
+                        await updateQuizQuestion(courseId, lessonId, existing.id, {
+                            question_text: incoming.question_text,
+                            question_type: incoming.question_type,
+                            correct_answer: incoming.correct_answer,
+                            explanation: incoming.explanation,
+                            options: incoming.question_type === 'multiple_choice' ? incoming.options : undefined,
+                            order: incoming.order,
+                        });
+                    }
+
+                    const existingIds = new Set(existingQuestions.map((q) => q.id));
+                    for (const question of lessonData.quizQuestions) {
+                        if (typeof question.id === 'number' && existingIds.has(question.id)) continue;
+                        await createQuizQuestion(courseId, lessonId, {
+                            question_text: question.question_text,
+                            question_type: question.question_type,
+                            correct_answer: question.correct_answer,
+                            explanation: question.explanation,
+                            options: question.question_type === 'multiple_choice' ? question.options : undefined,
+                            order: question.order,
+                        });
+                    }
+                }
+
                 if (lessonData.resourcesToDelete?.length) {
                     for (const resourceId of lessonData.resourcesToDelete) {
                         try { await deleteLessonResource(resourceId); } catch {}
@@ -363,6 +452,20 @@ const CurriculumSection: React.FC<CurriculumSectionProps> = ({ courseId }) => {
             } else {
                 const response = await createLesson(selectedModuleId, lessonPayload);
                 lessonId = response.data.id;
+
+                if (lessonData.type === 'quiz') {
+                    const questions = lessonData.quizQuestions || quizMeta.questions || [];
+                    for (const question of questions) {
+                        await createQuizQuestion(courseId, lessonId, {
+                            question_text: question.question_text,
+                            question_type: question.question_type,
+                            correct_answer: question.correct_answer,
+                            explanation: question.explanation,
+                            options: question.question_type === 'multiple_choice' ? question.options : undefined,
+                            order: question.order,
+                        });
+                    }
+                }
             }
 
             if (lessonData.type === 'video' && lessonData.videoFile) {
@@ -434,6 +537,7 @@ const CurriculumSection: React.FC<CurriculumSectionProps> = ({ courseId }) => {
             case 'document': return <DescriptionIcon sx={{ color: '#10b981' }} />;
             case 'text': return <DescriptionIcon sx={{ color: '#10b981' }} />;
             case 'quiz': return <QuizIcon sx={{ color: '#8B5CF6' }} />;
+            case 'assignment': return <AssignmentTurnedInIcon sx={{ color: '#b45309' }} />;
             case 'live': return <VideocamIcon sx={{ color: '#dc2626' }} />;
         }
     };
@@ -444,6 +548,7 @@ const CurriculumSection: React.FC<CurriculumSectionProps> = ({ courseId }) => {
             case 'document': return '#d1fae5';
             case 'text': return '#d1fae5';
             case 'quiz': return '#F3EEFE';
+            case 'assignment': return '#fff6d8';
             case 'live': return '#fee2e2';
         }
     };

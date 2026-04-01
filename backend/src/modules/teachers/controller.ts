@@ -139,7 +139,7 @@ export const createTeacher = async (req: Request, res: Response) => {
 export const updateTeacher = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const { email, first_name, last_name, phone, is_active, password } = req.body;
+        const { email, first_name, last_name, phone, is_active, password, is_verified } = req.body;
 
         // Find teacher
         const teacher = await User.findOne({
@@ -173,6 +173,7 @@ export const updateTeacher = async (req: Request, res: Response) => {
         if (last_name) teacher.last_name = last_name;
         if (phone !== undefined) teacher.phone = phone;
         if (is_active !== undefined) teacher.is_active = is_active;
+        if (is_verified !== undefined) teacher.is_verified = is_verified;
         if (password) teacher.password = password; // Will be hashed by the model hook
 
         await teacher.save();

@@ -30,6 +30,7 @@ export interface UpdateStudentPayload {
     last_name?: string;
     phone?: string;
     is_active?: boolean;
+    is_verified?: boolean;
 }
 
 export const getAllStudents = async (search?: string, status?: string) => {

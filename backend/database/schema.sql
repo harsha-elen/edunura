@@ -15,6 +15,8 @@ CREATE TABLE IF NOT EXISTS `course_categories` (
   `accent_color` varchar(20) DEFAULT '#e8f2fe' COMMENT 'Accent/background color',
   `course_count` int(10) unsigned DEFAULT 0 COMMENT 'Total number of courses in this category',
   `display_order` int(11) DEFAULT 0 COMMENT 'Order for displaying categories',
+  `tags_enabled` tinyint(1) DEFAULT 0 COMMENT 'Enable tags for this category',
+  `tags` json DEFAULT NULL COMMENT 'Ordered tags list for this category',
   `is_featured` tinyint(1) DEFAULT 0 COMMENT 'Featured categories appear first',
   `is_active` tinyint(1) DEFAULT 1 COMMENT 'Active categories are visible to users',
   `created_at` datetime NOT NULL,
@@ -85,6 +87,7 @@ CREATE TABLE IF NOT EXISTS `courses` (
   `updated_at` datetime NOT NULL,
   `outcomes` longtext DEFAULT NULL,
   `prerequisites` longtext DEFAULT NULL,
+  `tags` json DEFAULT NULL COMMENT 'Selected category tags for the course',
   `validity_period` int(11) DEFAULT NULL,
   `discounted_price` decimal(10,2) DEFAULT 0.00,
   `instructors` longtext DEFAULT NULL,
@@ -119,7 +122,7 @@ CREATE TABLE IF NOT EXISTS `lessons` (
   `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `section_id` int(10) unsigned NOT NULL,
   `title` varchar(255) NOT NULL,
-  `content_type` enum('video','quiz','text','document','live') NOT NULL DEFAULT 'text',
+  `content_type` enum('video','quiz','text','document','live','assignment') NOT NULL DEFAULT 'text',
   `content_platform` enum('zoom','jitsi') DEFAULT 'zoom',
   `content_body` text DEFAULT NULL,
   `file_path` varchar(500) DEFAULT NULL,
@@ -192,6 +195,30 @@ CREATE TABLE IF NOT EXISTS `lesson_resources` (
   PRIMARY KEY (`id`),
   KEY `lesson_id` (`lesson_id`),
   CONSTRAINT `lesson_resources_ibfk_1` FOREIGN KEY (`lesson_id`) REFERENCES `lessons` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Table: assignment_submissions
+CREATE TABLE IF NOT EXISTS `assignment_submissions` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `lesson_id` int(10) unsigned NOT NULL,
+  `student_id` int(10) unsigned NOT NULL,
+  `file_path` varchar(500) NOT NULL,
+  `file_name` varchar(255) NOT NULL,
+  `mime_type` varchar(100) NOT NULL,
+  `file_size` int(10) unsigned NOT NULL,
+  `status` enum('submitted','reviewed','resubmit_required') NOT NULL DEFAULT 'submitted',
+  `score` float DEFAULT NULL,
+  `feedback` text DEFAULT NULL,
+  `submitted_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `reviewed_at` datetime DEFAULT NULL,
+  `created_at` datetime DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_assignment_submission_per_student` (`lesson_id`,`student_id`),
+  KEY `idx_assignment_submissions_lesson_id` (`lesson_id`),
+  KEY `idx_assignment_submissions_student_id` (`student_id`),
+  CONSTRAINT `assignment_submissions_ibfk_1` FOREIGN KEY (`lesson_id`) REFERENCES `lessons` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `assignment_submissions_ibfk_2` FOREIGN KEY (`student_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Table: live_sessions
@@ -273,4 +300,55 @@ CREATE TABLE IF NOT EXISTS `lesson_discussions` (
   KEY `user_id` (`user_id`),
   CONSTRAINT `lesson_discussions_ibfk_1` FOREIGN KEY (`lesson_id`) REFERENCES `lessons` (`id`) ON DELETE CASCADE,
   CONSTRAINT `lesson_discussions_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Table: quiz_questions
+CREATE TABLE IF NOT EXISTS `quiz_questions` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `lesson_id` int(10) unsigned NOT NULL,
+  `question_text` text NOT NULL,
+  `question_type` enum('multiple_choice','true_false','short_answer') NOT NULL,
+  `correct_answer` text NOT NULL,
+  `explanation` text DEFAULT NULL,
+  `order` int(11) NOT NULL DEFAULT 0,
+  `created_at` datetime DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_quiz_questions_lesson_id` (`lesson_id`),
+  CONSTRAINT `quiz_questions_ibfk_1` FOREIGN KEY (`lesson_id`) REFERENCES `lessons` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Table: quiz_question_options
+CREATE TABLE IF NOT EXISTS `quiz_question_options` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `question_id` int(10) unsigned NOT NULL,
+  `option_text` text NOT NULL,
+  `option_order` int(11) NOT NULL DEFAULT 0,
+  `created_at` datetime DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_quiz_question_options_question_id` (`question_id`),
+  CONSTRAINT `quiz_question_options_ibfk_1` FOREIGN KEY (`question_id`) REFERENCES `quiz_questions` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Table: quiz_attempts
+CREATE TABLE IF NOT EXISTS `quiz_attempts` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `lesson_id` int(10) unsigned NOT NULL,
+  `student_id` int(10) unsigned NOT NULL,
+  `answers` json NOT NULL,
+  `results` json NOT NULL,
+  `total_questions` int(10) unsigned NOT NULL DEFAULT 0,
+  `correct_count` int(10) unsigned NOT NULL DEFAULT 0,
+  `wrong_count` int(10) unsigned NOT NULL DEFAULT 0,
+  `review_count` int(10) unsigned NOT NULL DEFAULT 0,
+  `submitted_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `created_at` datetime DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_quiz_attempt_per_student` (`lesson_id`,`student_id`),
+  KEY `idx_quiz_attempts_lesson_id` (`lesson_id`),
+  KEY `idx_quiz_attempts_student_id` (`student_id`),
+  CONSTRAINT `quiz_attempts_ibfk_1` FOREIGN KEY (`lesson_id`) REFERENCES `lessons` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `quiz_attempts_ibfk_2` FOREIGN KEY (`student_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

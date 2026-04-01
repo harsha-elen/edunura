@@ -74,6 +74,7 @@ export interface TextMediaLessonUploadProps {
         allowPreview: boolean;
         resources: Array<{ id?: number; name: string; size: string; type: string }>;
     };
+    lessonKind?: 'text' | 'assignment';
 }
 
 interface UploadedFile {
@@ -89,6 +90,7 @@ const TextMediaLessonUpload: React.FC<TextMediaLessonUploadProps> = ({
     onBack,
     onSave,
     initialData,
+    lessonKind = 'text',
 }) => {
     const theme = useTheme();
     const [title, setTitle] = useState(initialData?.title || '');
@@ -111,8 +113,16 @@ const TextMediaLessonUpload: React.FC<TextMediaLessonUploadProps> = ({
     const titleRef = useRef(title);
 
     const draftKey = useMemo(() => {
+        if (lessonKind === 'assignment') {
+            return lessonId ? `assignment-lesson-draft-${lessonId}` : 'assignment-lesson-draft-new';
+        }
         return lessonId ? `text-lesson-draft-${lessonId}` : 'text-lesson-draft-new';
-    }, [lessonId]);
+    }, [lessonId, lessonKind]);
+
+    const lessonTitle = lessonKind === 'assignment' ? 'Assignment Lesson' : 'Text Lesson';
+    const lessonSubtitle = lessonKind === 'assignment'
+        ? 'Create assignment instructions and attachments for student submissions'
+        : 'Add rich text content and attachments to your lesson';
 
     useEffect(() => { titleRef.current = title; }, [title]);
 
@@ -328,10 +338,10 @@ const TextMediaLessonUpload: React.FC<TextMediaLessonUploadProps> = ({
                         </IconButton>
                         <Box>
                             <Typography variant="h6" sx={{ fontWeight: 700, color: '#1e293b', lineHeight: 1.2 }}>
-                                {initialData ? 'Edit Text Lesson' : 'Create Text Lesson'}
+                                {initialData ? `Edit ${lessonTitle}` : `Create ${lessonTitle}`}
                             </Typography>
                             <Typography variant="caption" sx={{ color: '#64748b', fontWeight: 500 }}>
-                                Add rich text content and attachments to your lesson
+                                {lessonSubtitle}
                             </Typography>
                         </Box>
                     </Box>

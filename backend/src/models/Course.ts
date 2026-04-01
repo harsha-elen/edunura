@@ -36,6 +36,7 @@ interface CourseAttributes {
     discounted_price?: number;
     outcomes?: string[]; // What you'll learn
     prerequisites?: string[];
+    tags?: string[]; // Selected category tags
     instructors?: { id: number; name: string; email: string; avatar?: string }[];
     // Settings Tab Fields
     enable_discussion_forum?: boolean;
@@ -75,6 +76,7 @@ class Course extends Model<CourseAttributes, CourseCreationAttributes> implement
     public discounted_price?: number;
     public outcomes?: string[];
     public prerequisites?: string[];
+    public tags?: string[];
     public instructors?: { id: number; name: string; email: string; avatar?: string }[];
     public enable_discussion_forum?: boolean;
     public show_course_rating?: boolean;
@@ -189,6 +191,11 @@ Course.init(
         prerequisites: {
             type: DataTypes.JSON,
             allowNull: true,
+        },
+        tags: {
+            type: DataTypes.JSON,
+            allowNull: true,
+            comment: 'Selected category tags for the course',
         },
         enable_discussion_forum: {
             type: DataTypes.BOOLEAN,

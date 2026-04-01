@@ -21,9 +21,15 @@ import {
     FormControl,
     Select,
     MenuItem,
+    IconButton,
 } from '@mui/material';
 import {
     NavigateNext as NavigateNextIcon,
+    Add as AddIcon,
+    Check as CheckIcon,
+    Close as CloseIcon,
+    EditOutlined as EditOutlinedIcon,
+    DragIndicator as DragIndicatorIcon,
     Search as SearchIcon,
     Analytics as AnalyticsIcon,
     Code as CodeIcon,
@@ -47,6 +53,7 @@ import {
     Group as GroupIcon,
 } from '@mui/icons-material';
 import { getCategoryById, getCategories, updateCategory, CategoryFormData, CourseCategory } from '@/services/categories';
+import { ReactSortable } from 'react-sortablejs';
 
 const iconOptions = [
     { key: 'analytics', icon: <AnalyticsIcon /> },
@@ -76,6 +83,11 @@ const accentColors = [
     { key: 'fuchsia', color: '#d946ef' },
 ];
 
+interface SortableTagItem {
+    id: number;
+    name: string;
+}
+
 const EditCourseCategory: React.FC = () => {
     const theme = useTheme();
     const router = useRouter();
@@ -97,6 +109,11 @@ const EditCourseCategory: React.FC = () => {
 
     const [selectedIcon, setSelectedIcon] = useState('analytics');
     const [selectedColor, setSelectedColor] = useState('#2b8cee');
+    const [tagsEnabled, setTagsEnabled] = useState(false);
+    const [uiTags, setUiTags] = useState<SortableTagItem[]>([]);
+    const [isTagEditorOpen, setIsTagEditorOpen] = useState(false);
+    const [tagInput, setTagInput] = useState('');
+    const [editingTagId, setEditingTagId] = useState<number | null>(null);
     const [categories, setCategories] = useState<CourseCategory[]>([]);
     const [currentCategory, setCurrentCategory] = useState<CourseCategory | null>(null);
     const [loading, setLoading] = useState(false);
@@ -143,6 +160,26 @@ const EditCourseCategory: React.FC = () => {
 
             setSelectedIcon(category.icon || 'analytics');
             setSelectedColor(category.color || '#2b8cee');
+            setTagsEnabled(Boolean(category.tags_enabled));
+            
+            // Parse tags - handle both array and string JSON formats
+            let parsedTags: string[] = [];
+            if (category.tags) {
+                if (typeof category.tags === 'string') {
+                    try {
+                        parsedTags = JSON.parse(category.tags);
+                    } catch (e) {
+                        parsedTags = [];
+                    }
+                } else if (Array.isArray(category.tags)) {
+                    parsedTags = category.tags;
+                }
+            }
+            
+            setUiTags(parsedTags.map((tag: string, index: number) => ({ 
+                id: Date.now() + index, 
+                name: tag 
+            })));
         } catch (error: any) {
             setSnackbar({
                 open: true,
@@ -180,7 +217,58 @@ const EditCourseCategory: React.FC = () => {
 
     const handleParentChange = (event: any) => {
         const value = event.target.value;
-        setFormData({ ...formData, parent_id: value === '' ? undefined : Number(value) });
+        const parentId = value === '' ? undefined : Number(value);
+        setFormData({ ...formData, parent_id: parentId });
+    };
+
+    const handleAddTagUi = () => {
+        setEditingTagId(null);
+        setTagInput('');
+        setIsTagEditorOpen(true);
+    };
+
+    const handleEditTagUi = (tag: SortableTagItem) => {
+        setEditingTagId(tag.id);
+        setTagInput(tag.name);
+        setIsTagEditorOpen(true);
+    };
+
+    const handleRemoveTagUi = (tagId: number) => {
+        setUiTags((prev) => prev.filter((tag) => tag.id !== tagId));
+        if (editingTagId === tagId) {
+            setTagInput('');
+            setEditingTagId(null);
+            setIsTagEditorOpen(false);
+        }
+    };
+
+    const handleSaveTagUi = () => {
+        const normalizedTag = tagInput.trim();
+        if (!normalizedTag) return;
+
+        if (editingTagId !== null) {
+            setUiTags((prev) => prev.map((tag) => (tag.id === editingTagId ? { ...tag, name: normalizedTag } : tag)));
+        } else {
+            setUiTags((prev) => [...prev, { id: Date.now(), name: normalizedTag }]);
+        }
+
+        setTagInput('');
+        setEditingTagId(null);
+        setIsTagEditorOpen(false);
+    };
+
+    const handleCancelTagUi = () => {
+        setTagInput('');
+        setEditingTagId(null);
+        setIsTagEditorOpen(false);
+    };
+
+    const handleTagsToggle = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const enabled = event.target.checked;
+        setTagsEnabled(enabled);
+        if (!enabled) {
+            handleCancelTagUi();
+        }
     };
 
     const validateForm = (): boolean => {
@@ -210,7 +298,11 @@ const EditCourseCategory: React.FC = () => {
 
         try {
             setLoading(true);
-            await updateCategory(Number(id), formData);
+            await updateCategory(Number(id), {
+                ...formData,
+                tags_enabled: tagsEnabled,
+                tags: uiTags.map((tag) => tag.name),
+            });
             setSnackbar({
                 open: true,
                 message: 'Category updated successfully!',
@@ -327,7 +419,7 @@ const EditCourseCategory: React.FC = () => {
                                     </Typography>
                                     <FormControl fullWidth size="small">
                                         <Select
-                                            value={formData.parent_id || ''}
+                                                value={formData.parent_id ? String(formData.parent_id) : ''}
                                             onChange={handleParentChange}
                                             displayEmpty
                                             sx={{
@@ -337,7 +429,7 @@ const EditCourseCategory: React.FC = () => {
                                         >
                                             <MenuItem value="">None (Top Level Category)</MenuItem>
                                             {categories.map((category) => (
-                                                <MenuItem key={category.id} value={category.id}>
+                                                    <MenuItem key={category.id} value={String(category.id)}>
                                                     {category.name}
                                                 </MenuItem>
                                             ))}
@@ -618,6 +710,133 @@ const EditCourseCategory: React.FC = () => {
                                     sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: theme.palette.primary.main } }}
                                 />
                             </Box>
+                            <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <Box>
+                                    <Typography variant="body2" sx={{ fontWeight: 600, color: '#334155' }}>
+                                        Enable Tags
+                                    </Typography>
+                                </Box>
+                                <Switch
+                                    checked={tagsEnabled}
+                                    onChange={handleTagsToggle}
+                                    sx={{ '& .MuiSwitch-switchBase.Mui-checked': { color: theme.palette.primary.main } }}
+                                />
+                            </Box>
+                            {tagsEnabled && (
+                                <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #f1f5f9' }}>
+                                    <Button
+                                        variant="outlined"
+                                        size="small"
+                                        startIcon={<AddIcon fontSize="small" />}
+                                        onClick={handleAddTagUi}
+                                        sx={{
+                                            textTransform: 'none',
+                                            borderRadius: 2,
+                                            fontWeight: 600,
+                                            borderColor: '#cbd5e1',
+                                            color: '#334155',
+                                            '&:hover': { borderColor: theme.palette.primary.main, color: theme.palette.primary.main },
+                                        }}
+                                    >
+                                        Add Tag
+                                    </Button>
+                                    {isTagEditorOpen && (
+                                        <Box sx={{ mt: 1.5, display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'nowrap', width: '100%' }}>
+                                            <TextField
+                                                size="small"
+                                                placeholder="Enter tag name"
+                                                value={tagInput}
+                                                onChange={(event) => setTagInput(event.target.value)}
+                                                onKeyDown={(event) => {
+                                                    if (event.key === 'Enter') {
+                                                        event.preventDefault();
+                                                        handleSaveTagUi();
+                                                    }
+                                                }}
+                                                sx={{ flex: 1, minWidth: 0 }}
+                                            />
+                                            <IconButton
+                                                onClick={handleSaveTagUi}
+                                                sx={{
+                                                    width: 34,
+                                                    height: 34,
+                                                    borderRadius: 1.5,
+                                                    bgcolor: 'rgba(16, 185, 129, 0.12)',
+                                                    color: '#059669',
+                                                    '&:hover': { bgcolor: 'rgba(16, 185, 129, 0.22)' },
+                                                }}
+                                            >
+                                                <CheckIcon fontSize="small" />
+                                            </IconButton>
+                                            <IconButton
+                                                onClick={handleCancelTagUi}
+                                                sx={{
+                                                    width: 34,
+                                                    height: 34,
+                                                    borderRadius: 1.5,
+                                                    bgcolor: 'rgba(239, 68, 68, 0.12)',
+                                                    color: '#dc2626',
+                                                    '&:hover': { bgcolor: 'rgba(239, 68, 68, 0.2)' },
+                                                }}
+                                            >
+                                                <CloseIcon fontSize="small" />
+                                            </IconButton>
+                                        </Box>
+                                    )}
+                                    {uiTags.length > 0 && (
+                                        <Box sx={{ mt: 1.5 }}>
+                                            <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                                                Drag tags to reorder
+                                            </Typography>
+                                            <ReactSortable list={uiTags} setList={setUiTags} animation={150}>
+                                                {uiTags.map((tag) => (
+                                                    <Box
+                                                        key={tag.id}
+                                                        onClick={() => handleEditTagUi(tag)}
+                                                        sx={{ display: 'flex', gap: 0.5, alignItems: 'center', mb: 1, mt: 1, cursor: 'pointer' }}
+                                                    >
+                                                        <DragIndicatorIcon className="tag-drag-handle" sx={{ color: '#94a3b8', cursor: 'grab' }} />
+                                                        <TextField
+                                                            placeholder="Tag"
+                                                            fullWidth
+                                                            size="small"
+                                                            value={tag.name}
+                                                            disabled
+                                                            sx={{
+                                                                '& .MuiOutlinedInput-root': {
+                                                                    backgroundColor: editingTagId === tag.id ? 'rgba(43, 140, 238, 0.08)' : '#f6f7f8',
+                                                                    borderRadius: 1.5,
+                                                                    '& fieldset': { borderColor: editingTagId === tag.id ? 'rgba(43, 140, 238, 0.4)' : '#e7edf3' },
+                                                                },
+                                                            }}
+                                                        />
+                                                        <IconButton
+                                                            size="small"
+                                                            onClick={(event) => {
+                                                                event.stopPropagation();
+                                                                handleEditTagUi(tag);
+                                                            }}
+                                                            sx={{ color: '#64748b', '&:hover': { color: theme.palette.primary.main }, flexShrink: 0 }}
+                                                        >
+                                                            <EditOutlinedIcon fontSize="small" />
+                                                        </IconButton>
+                                                        <IconButton
+                                                            size="small"
+                                                            onClick={(event) => {
+                                                                event.stopPropagation();
+                                                                handleRemoveTagUi(tag.id);
+                                                            }}
+                                                            sx={{ color: '#64748b', '&:hover': { color: '#dc2626' }, flexShrink: 0 }}
+                                                        >
+                                                            <CloseIcon fontSize="small" />
+                                                        </IconButton>
+                                                    </Box>
+                                                ))}
+                                            </ReactSortable>
+                                        </Box>
+                                    )}
+                                </Box>
+                            )}
                         </Paper>
 
                         <Paper

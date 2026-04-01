@@ -71,6 +71,8 @@ const CreateCourse: React.FC<CreateCourseProps> = ({ editCourseId }) => {
     const [description, setDescription] = useState('');
     const [category, setCategory] = useState('');
     const [level, setLevel] = useState('beginner');
+    const [categoryTags, setCategoryTags] = useState<string[]>([]);
+    const [selectedTags, setSelectedTags] = useState<string[]>([]);
     const [outcomes, setOutcomes] = useState<SortableItem[]>([]);
     const [newOutcome, setNewOutcome] = useState('');
     const [prerequisites, setPrerequisites] = useState<SortableItem[]>([]);
@@ -121,7 +123,9 @@ const CreateCourse: React.FC<CreateCourseProps> = ({ editCourseId }) => {
     useEffect(() => {
         const fetchCategories = async () => {
             try {
+                // Fetch all categories without filters so we can see all available options including tags
                 const response = await getCategories();
+                console.log('Fetched categories:', response.data);
                 setCategories(response.data);
             } catch (error) {
                 console.error('Failed to fetch categories:', error);
@@ -130,9 +134,66 @@ const CreateCourse: React.FC<CreateCourseProps> = ({ editCourseId }) => {
         fetchCategories();
     }, []);
 
+    // Load available tags when category changes
+    useEffect(() => {
+        if (!category) {
+            console.log('No category selected');
+            setCategoryTags([]);
+            setSelectedTags([]);
+            return;
+        }
+
+        console.log('Category changed:', category);
+        console.log('Available categories:', categories.map(c => ({ id: c.id, name: c.name, slug: c.slug, tags_enabled: c.tags_enabled, tags: c.tags })));
+
+        // Try to find category by slug, name, or ID
+        const selectedCategory = categories.find((cat) => 
+            cat.slug === category || 
+            cat.name === category || 
+            String(cat.id) === category
+        );
+
+        if (selectedCategory) {
+            console.log('Selected category found:', selectedCategory);
+            if (selectedCategory.tags_enabled) {
+                // Parse tags if they're stringified JSON or already an array
+                let parsedTags: string[] = [];
+                if (selectedCategory.tags) {
+                    if (typeof selectedCategory.tags === 'string') {
+                        try {
+                            parsedTags = JSON.parse(selectedCategory.tags);
+                        } catch (e) {
+                            console.error('Failed to parse tags:', e);
+                            parsedTags = [];
+                        }
+                    } else if (Array.isArray(selectedCategory.tags)) {
+                        parsedTags = selectedCategory.tags;
+                    }
+                }
+                console.log('Category has tags enabled. Parsed tags:', parsedTags);
+                setCategoryTags(parsedTags);
+                setSelectedTags([]);
+            } else {
+                console.log('Category does not have tags enabled');
+                setCategoryTags([]);
+                setSelectedTags([]);
+            }
+        } else {
+            console.log('Category not found. Tried to match:', category);
+            console.log('Available slugs:', categories.map(c => c.slug));
+            console.log('Available names:', categories.map(c => c.name));
+            setCategoryTags([]);
+            setSelectedTags([]);
+        }
+    }, [category, categories]);
+
     // Load course data in edit mode
     useEffect(() => {
         if (!editCourseId) return;
+        
+        // Wait for categories to load first
+        if (categories.length === 0) return;
+        
         const loadCourse = async () => {
             setLoadingCourse(true);
             try {
@@ -145,6 +206,14 @@ const CreateCourse: React.FC<CreateCourseProps> = ({ editCourseId }) => {
                 setCategory(course.category || '');
                 setLevel(course.level || 'beginner');
                 setVisibility(course.status === 'published' ? 'published' : 'draft');
+
+                // Tags - parse if needed
+                if (course.tags) {
+                    const parsedTags = typeof course.tags === 'string'
+                        ? JSON.parse(course.tags)
+                        : course.tags;
+                    setSelectedTags(Array.isArray(parsedTags) ? parsedTags : []);
+                }
 
                 // Outcomes
                 const parsedOutcomes = typeof course.outcomes === 'string'
@@ -205,7 +274,7 @@ const CreateCourse: React.FC<CreateCourseProps> = ({ editCourseId }) => {
             }
         };
         loadCourse();
-    }, [editCourseId]);
+    }, [editCourseId, categories]);
 
     // Video preview URL lifecycle
     useEffect(() => {
@@ -265,6 +334,7 @@ const CreateCourse: React.FC<CreateCourseProps> = ({ editCourseId }) => {
             level,
             outcomes: outcomes.map(o => o.name),
             prerequisites: prerequisites.map(p => p.name),
+            tags: selectedTags,
             price: isFree ? 0 : parseFloat(price) || 0,
             discounted_price: isFree ? 0 : parseFloat(discountedPrice) || 0,
             is_free: isFree,
@@ -1195,6 +1265,28 @@ const CreateCourse: React.FC<CreateCourseProps> = ({ editCourseId }) => {
                                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1, borderTop: '1px solid #e7edf3' }}>
                                         <Box>
                                             <Typography variant="body2" sx={{ fontWeight: 600, mb: 1, color: '#0d141b' }}>
+                                                Level
+                                            </Typography>
+                                            <Select
+                                                value={level}
+                                                onChange={(e) => setLevel(e.target.value)}
+                                                fullWidth
+                                                size="small"
+                                                sx={{
+                                                    backgroundColor: '#f6f7f8',
+                                                    borderRadius: 1.5,
+                                                    '& fieldset': { borderColor: '#e7edf3' },
+                                                    '&:hover fieldset': { borderColor: '#cbd5e1' },
+                                                    '&.Mui-focused fieldset': { borderColor: theme.palette.primary.main },
+                                                }}
+                                            >
+                                                <MenuItem value="beginner">Beginner</MenuItem>
+                                                <MenuItem value="intermediate">Intermediate</MenuItem>
+                                                <MenuItem value="advanced">Advanced</MenuItem>
+                                            </Select>
+                                        </Box>
+                                        <Box>
+                                            <Typography variant="body2" sx={{ fontWeight: 600, mb: 1, color: '#0d141b' }}>
                                                 Category <span style={{ color: '#dc2626' }}>*</span>
                                             </Typography>
                                             <Select
@@ -1221,28 +1313,54 @@ const CreateCourse: React.FC<CreateCourseProps> = ({ editCourseId }) => {
                                                 ))}
                                             </Select>
                                         </Box>
-                                        <Box>
-                                            <Typography variant="body2" sx={{ fontWeight: 600, mb: 1, color: '#0d141b' }}>
-                                                Level
-                                            </Typography>
-                                            <Select
-                                                value={level}
-                                                onChange={(e) => setLevel(e.target.value)}
-                                                fullWidth
-                                                size="small"
-                                                sx={{
-                                                    backgroundColor: '#f6f7f8',
-                                                    borderRadius: 1.5,
-                                                    '& fieldset': { borderColor: '#e7edf3' },
-                                                    '&:hover fieldset': { borderColor: '#cbd5e1' },
-                                                    '&.Mui-focused fieldset': { borderColor: theme.palette.primary.main },
-                                                }}
-                                            >
-                                                <MenuItem value="beginner">Beginner</MenuItem>
-                                                <MenuItem value="intermediate">Intermediate</MenuItem>
-                                                <MenuItem value="advanced">Advanced</MenuItem>
-                                            </Select>
-                                        </Box>
+
+                                        {/* Category Tags */}
+                                        {category && (categoryTags.length > 0 ? (
+                                            <Box>
+                                                <Typography variant="body2" sx={{ fontWeight: 600, mb: 1.5, color: '#0d141b' }}>
+                                                    Category Tags
+                                                </Typography>
+                                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                                                    {categoryTags.map((tag) => (
+                                                        <Box
+                                                            key={tag}
+                                                            onClick={() => {
+                                                                if (selectedTags.includes(tag)) {
+                                                                    setSelectedTags(selectedTags.filter(t => t !== tag));
+                                                                } else {
+                                                                    setSelectedTags([...selectedTags, tag]);
+                                                                }
+                                                            }}
+                                                            sx={{
+                                                                px: 2,
+                                                                py: 1,
+                                                                borderRadius: 2,
+                                                                border: selectedTags.includes(tag) ? `2px solid ${theme.palette.primary.main}` : '1px solid #e7edf3',
+                                                                backgroundColor: selectedTags.includes(tag) ? 'rgba(43, 140, 238, 0.1)' : '#f6f7f8',
+                                                                color: selectedTags.includes(tag) ? theme.palette.primary.main : '#475569',
+                                                                cursor: 'pointer',
+                                                                transition: 'all 0.2s ease',
+                                                                fontWeight: selectedTags.includes(tag) ? 600 : 500,
+                                                                fontSize: '0.875rem',
+                                                                userSelect: 'none',
+                                                                '&:hover': {
+                                                                    borderColor: theme.palette.primary.main,
+                                                                    backgroundColor: 'rgba(43, 140, 238, 0.08)'
+                                                                }
+                                                            }}
+                                                        >
+                                                            {tag}
+                                                        </Box>
+                                                    ))}
+                                                </Box>
+                                            </Box>
+                                        ) : (
+                                            <Box sx={{ pt: 1 }}>
+                                                <Typography variant="caption" sx={{ color: '#94a3b8' }}>
+                                                    This category does not have tags enabled or no tags available
+                                                </Typography>
+                                            </Box>
+                                        ))}
                                     </Box>
                                 </Box>
                             </Paper>

@@ -5,6 +5,7 @@ import { LessonResource } from './LessonResource';
 export enum LessonType {
     VIDEO = 'video',
     QUIZ = 'quiz',
+    ASSIGNMENT = 'assignment',
     TEXT = 'text',
     DOCUMENT = 'document',
     LIVE = 'live',

@@ -30,6 +30,11 @@ import {
     // Lesson Discussions
     getLessonDiscussions,
     createLessonDiscussion,
+    // Assignment Submissions
+    submitAssignment,
+    getMyAssignmentSubmission,
+    getAssignmentSubmissionsForTeacher,
+    reviewAssignmentSubmission,
 } from './controller';
 import { authenticate, authorize } from '../../middleware/auth';
 import { uploadCourseAsset } from '../../middleware/upload';
@@ -135,6 +140,37 @@ router.delete(
     authenticate,
     authorize('admin', 'teacher'),
     deleteLessonResource
+);
+
+// Assignment Submissions
+router.post(
+    '/lessons/:lessonId/assignment/submission',
+    authenticate,
+    authorize('student'),
+    setCourseIdFromLesson,
+    uploadCourseAsset.single('assignment_pdf'),
+    submitAssignment
+);
+
+router.get(
+    '/lessons/:lessonId/assignment/submission/my',
+    authenticate,
+    authorize('student'),
+    getMyAssignmentSubmission
+);
+
+router.get(
+    '/lessons/:lessonId/assignment/submissions',
+    authenticate,
+    authorize('admin', 'teacher', 'moderator'),
+    getAssignmentSubmissionsForTeacher
+);
+
+router.patch(
+    '/assignment-submissions/:submissionId/review',
+    authenticate,
+    authorize('admin', 'teacher', 'moderator'),
+    reviewAssignmentSubmission
 );
 
 // ========================================

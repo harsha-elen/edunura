@@ -33,7 +33,7 @@ export interface Lesson {
     id: number;
     section_id: number;
     title: string;
-    content_type: 'video' | 'text' | 'quiz' | 'document' | 'live';
+    content_type: 'video' | 'text' | 'quiz' | 'document' | 'live' | 'assignment';
     content_body?: string;
     file_path?: string;
     zoom_meeting_id?: string;
@@ -55,7 +55,7 @@ export interface Lesson {
 
 export interface CreateLessonData {
     title: string;
-    content_type: 'video' | 'text' | 'quiz' | 'document' | 'live';
+    content_type: 'video' | 'text' | 'quiz' | 'document' | 'live' | 'assignment';
     content_body?: string;
     file_path?: string;
     zoom_meeting_id?: string;
@@ -70,6 +70,89 @@ export interface CreateLessonData {
     release_date?: string | null;
     drip_days?: number | null;
     prerequisite_lesson_id?: number | null;
+}
+
+export type QuizQuestionType = 'multiple_choice' | 'true_false' | 'short_answer';
+
+export interface CreateQuizQuestionData {
+    question_text: string;
+    question_type: QuizQuestionType;
+    correct_answer: string;
+    explanation?: string;
+    options?: string[];
+    order?: number;
+}
+
+export interface StudentQuizOption {
+    id: number;
+    question_id: number;
+    option_text: string;
+    option_order: number;
+}
+
+export interface StudentQuizQuestion {
+    id: number;
+    question_text: string;
+    question_type: QuizQuestionType;
+    order: number;
+    options: StudentQuizOption[];
+}
+
+export interface StudentQuizResponse {
+    lesson_id: number;
+    questions: StudentQuizQuestion[];
+    attempt: StudentQuizAttempt | null;
+}
+
+export interface StudentQuizAttemptResult {
+    question_id: number;
+    status: 'correct' | 'wrong' | 'review';
+    correct_answer?: string;
+    explanation?: string | null;
+}
+
+export interface StudentQuizAttempt {
+    id: number;
+    lesson_id: number;
+    student_id: number;
+    answers: Record<string, string>;
+    results: StudentQuizAttemptResult[];
+    total_questions: number;
+    correct_count: number;
+    wrong_count: number;
+    review_count: number;
+    submitted_at: string;
+}
+
+export type AssignmentSubmissionStatus = 'submitted' | 'reviewed' | 'resubmit_required';
+
+export interface AssignmentSubmission {
+    id: number;
+    lesson_id: number;
+    student_id: number;
+    file_path: string;
+    file_name: string;
+    mime_type: string;
+    file_size: number;
+    status: AssignmentSubmissionStatus;
+    score?: number | null;
+    feedback?: string | null;
+    submitted_at: string;
+    reviewed_at?: string | null;
+    student?: {
+        id: number;
+        first_name: string;
+        last_name: string;
+        email: string;
+        avatar?: string | null;
+    };
+}
+
+export interface QuizCheckAnswerResponse {
+    question_id: number;
+    is_correct: boolean;
+    correct_answer: string;
+    explanation: string | null;
 }
 
 export interface LessonDiscussion {
@@ -165,6 +248,89 @@ export const updateLesson = async (lessonId: number, data: Partial<CreateLessonD
 
 export const deleteLesson = async (lessonId: number) => {
     const response = await apiClient.delete(`/courses/lessons/${lessonId}`);
+    return response.data;
+};
+
+export const createQuizQuestion = async (courseId: number, lessonId: number, data: CreateQuizQuestionData) => {
+    const response = await apiClient.post(`/courses/${courseId}/lessons/${lessonId}/questions`, data);
+    return response.data;
+};
+
+export const getQuizQuestionsForTeacher = async (courseId: number, lessonId: number) => {
+    const response = await apiClient.get(`/courses/${courseId}/lessons/${lessonId}/questions`);
+    return response.data;
+};
+
+export const updateQuizQuestion = async (courseId: number, lessonId: number, questionId: number, data: Partial<CreateQuizQuestionData>) => {
+    const response = await apiClient.patch(`/courses/${courseId}/lessons/${lessonId}/questions/${questionId}`, data);
+    return response.data;
+};
+
+export const deleteQuizQuestion = async (courseId: number, lessonId: number, questionId: number) => {
+    const response = await apiClient.delete(`/courses/${courseId}/lessons/${lessonId}/questions/${questionId}`);
+    return response.data;
+};
+
+export const getStudentQuiz = async (lessonId: number): Promise<{ status: string; data: StudentQuizResponse }> => {
+    const response = await apiClient.get(`/lessons/${lessonId}/quiz`);
+    return response.data;
+};
+
+export const checkStudentQuizAnswer = async (
+    lessonId: number,
+    questionId: number,
+    studentAnswer: string
+): Promise<{ status: string; data: QuizCheckAnswerResponse }> => {
+    const response = await apiClient.post(`/lessons/${lessonId}/quiz/check-answer`, {
+        question_id: questionId,
+        student_answer: studentAnswer,
+    });
+    return response.data;
+};
+
+export const submitStudentQuiz = async (
+    lessonId: number,
+    answers: Array<{ question_id: number; student_answer: string }>
+): Promise<{ status: string; data: { lesson_id: number; already_submitted: boolean; attempt: StudentQuizAttempt } }> => {
+    const response = await apiClient.post(`/lessons/${lessonId}/quiz/submit`, { answers });
+    return response.data;
+};
+
+export const submitAssignment = async (
+    lessonId: number,
+    assignmentFile: File
+): Promise<{ status: string; message: string; data: AssignmentSubmission }> => {
+    const formData = new FormData();
+    formData.append('assignment_pdf', assignmentFile);
+    const response = await apiClient.post(`/courses/lessons/${lessonId}/assignment/submission`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+};
+
+export const getMyAssignmentSubmission = async (
+    lessonId: number
+): Promise<{ status: string; data: AssignmentSubmission | null }> => {
+    const response = await apiClient.get(`/courses/lessons/${lessonId}/assignment/submission/my`);
+    return response.data;
+};
+
+export const getAssignmentSubmissionsForTeacher = async (
+    lessonId: number
+): Promise<{ status: string; data: AssignmentSubmission[] }> => {
+    const response = await apiClient.get(`/courses/lessons/${lessonId}/assignment/submissions`);
+    return response.data;
+};
+
+export const reviewAssignmentSubmission = async (
+    submissionId: number,
+    payload: {
+        status?: AssignmentSubmissionStatus;
+        feedback?: string;
+        score?: number | null;
+    }
+): Promise<{ status: string; message: string; data: AssignmentSubmission }> => {
+    const response = await apiClient.patch(`/courses/assignment-submissions/${submissionId}/review`, payload);
     return response.data;
 };
 

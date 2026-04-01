@@ -11,6 +11,8 @@ export interface CourseCategory {
     accent_color?: string;
     course_count: number;
     display_order: number;
+    tags_enabled: boolean;
+    tags?: string[];
     is_featured: boolean;
     is_active: boolean;
     created_at: string;
@@ -26,6 +28,8 @@ export interface CategoryFormData {
     color?: string;
     accent_color?: string;
     display_order?: number;
+    tags_enabled?: boolean;
+    tags?: string[];
     is_featured?: boolean;
     is_active?: boolean;
 }
@@ -50,7 +54,7 @@ export const createCategory = async (data: CategoryFormData): Promise<{ status: 
 };
 
 export const updateCategory = async (id: number | string, data: Partial<CategoryFormData>): Promise<{ status: string; message: string; data: CourseCategory }> => {
-    const response = await apiClient.patch(`/categories/${id}`, data);
+    const response = await apiClient.put(`/categories/${id}`, data);
     return response.data;
 };
 

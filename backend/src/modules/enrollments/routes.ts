@@ -2,6 +2,8 @@ import { Router } from 'express';
 import {
     getCourseEnrollments,
     enrollStudent,
+    importEnrollmentRow,
+    importEnrollmentRowsBulk,
     unenrollStudent,
     updateEnrollmentStatus,
     searchAvailableStudents,
@@ -49,21 +51,25 @@ router.get('/courses/:courseId/lessons/:lessonId/progress', authorize('student')
 // Admin/Moderator only routes
 // ========================================
 
-router.use(authorize('admin', 'moderator'));
-
 // Get all enrollments for a course
-router.get('/courses/:courseId/enrollments', getCourseEnrollments);
+router.get('/courses/:courseId/enrollments', authorize('admin', 'moderator'), getCourseEnrollments);
 
 // Enroll a student in a course
-router.post('/courses/:courseId/enrollments', enrollStudent);
+router.post('/courses/:courseId/enrollments', authorize('admin', 'moderator'), enrollStudent);
+
+// Import one student row (used by bulk enroll UI)
+router.post('/courses/:courseId/enrollments/import-row', authorize('admin', 'moderator'), importEnrollmentRow);
+
+// Import many rows server-side and return final summary
+router.post('/courses/:courseId/enrollments/import-bulk', authorize('admin', 'moderator'), importEnrollmentRowsBulk);
 
 // Unenroll a student from a course
-router.delete('/courses/:courseId/enrollments/:studentId', unenrollStudent);
+router.delete('/courses/:courseId/enrollments/:studentId', authorize('admin', 'moderator'), unenrollStudent);
 
 // Update enrollment status
-router.patch('/courses/:courseId/enrollments/:studentId', updateEnrollmentStatus);
+router.patch('/courses/:courseId/enrollments/:studentId', authorize('admin', 'moderator'), updateEnrollmentStatus);
 
 // Search for available students to enroll
-router.get('/courses/:courseId/available-students', searchAvailableStudents);
+router.get('/courses/:courseId/available-students', authorize('admin', 'moderator'), searchAvailableStudents);
 
 export default router;

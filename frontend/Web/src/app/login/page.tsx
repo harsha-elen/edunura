@@ -39,8 +39,10 @@ const Login: React.FC = () => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [step2FA, setStep2FA] = useState(false);
+    const [emailVerificationRequired, setEmailVerificationRequired] = useState(false);
     const [tempToken, setTempToken] = useState('');
     const [otpCode, setOtpCode] = useState('');
+    const [resendTimer, setResendTimer] = useState(0);
     const [orgLogo, setOrgLogo] = useState<string | null>(typeof window !== 'undefined' ? localStorage.getItem('org_logo') : null);
     const [siteName, setSiteName] = useState(typeof window !== 'undefined' ? localStorage.getItem('site_name') || 'LMS Enterprise' : 'LMS Enterprise');
     const [safeNext, setSafeNext] = useState<string | undefined>(undefined);
@@ -81,6 +83,17 @@ const Login: React.FC = () => {
             });
     }, []);
 
+    // OTP Timer countdown
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+        if (resendTimer > 0) {
+            interval = setInterval(() => {
+                setResendTimer((prev) => prev - 1);
+            }, 1000);
+        }
+        return () => clearInterval(interval);
+    }, [resendTimer]);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
@@ -97,6 +110,30 @@ const Login: React.FC = () => {
                     setError('Invalid verification code.');
                     setLoading(false);
                 }
+            } else if (emailVerificationRequired) {
+                // Verify email during login
+                if (!otpCode || otpCode.length < 6) {
+                    setError('Please enter the 6-digit code sent to your email.');
+                    setLoading(false);
+                    return;
+                }
+                try {
+                    const response = await fetch(`${API_BASE_URL}/auth/verify-email-login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: email.trim(), otp: otpCode.trim() }),
+                    });
+                    const data = await response.json();
+                    if (data.status === 'success' && data.data?.user && data.data?.token) {
+                        login(data.data.token, data.data.user as any, data.data.refreshToken!, safeNext);
+                    } else {
+                        setError(data.message || 'Verification failed. Please try again.');
+                        setLoading(false);
+                    }
+                } catch (err: any) {
+                    setError(err.message || 'Failed to verify email.');
+                    setLoading(false);
+                }
             } else {
                 console.log('[Login Page] Calling login API...');
                 const response = await loginApi({ email, password });
@@ -107,6 +144,15 @@ const Login: React.FC = () => {
                         setStep2FA(true);
                         setTempToken(response.data.tempToken!);
                         setLoading(false);
+                        return;
+                    }
+                    if (response.data.requiresEmailVerification) {
+                        // Email verification required
+                        setEmailVerificationRequired(true);
+                        setResendTimer(60);
+                        setLoading(false);
+                        setError('');
+                        setOtpCode('');
                         return;
                     }
                     console.log('[Login Page] Login successful! User:', response.data.user);
@@ -122,6 +168,30 @@ const Login: React.FC = () => {
             console.error('[Login Page] Error response:', err.response?.data);
             console.error('[Login Page] Error message:', err.message);
             setError(err.response?.data?.message || 'Login failed. Please try again.');
+            setLoading(false);
+        }
+    };
+
+    const handleResendCode = async () => {
+        if (resendTimer > 0) return;
+        setError('');
+        setLoading(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email.trim(), password }),
+            });
+            const data = await response.json();
+            if (data.data?.requiresEmailVerification) {
+                setResendTimer(60);
+                setError('');
+            } else {
+                setError('Failed to resend code. Please try again.');
+            }
+        } catch (err: any) {
+            setError('Failed to resend code. Please try again.');
+        } finally {
             setLoading(false);
         }
     };
@@ -188,7 +258,7 @@ const Login: React.FC = () => {
                     <Box component="form" onSubmit={handleSubmit} sx={{ px: 4, pb: 5, display: 'flex', flexDirection: 'column', gap: 2 }}>
                         {error && <Alert severity="error">{error}</Alert>}
 
-                        {!step2FA ? (
+                        {!step2FA && !emailVerificationRequired ? (
                             <>
                                 <Box>
                                     <Typography variant="body2" fontWeight={500} sx={{ mb: 0.5, color: 'text.primary' }}>
@@ -261,7 +331,7 @@ const Login: React.FC = () => {
                                     </Link>
                                 </Box>
                             </>
-                        ) : (
+                        ) : step2FA ? (
                             <Box>
                                 <Typography variant="caption" sx={{ mb: 2, display: 'block', color: 'text.secondary' }}>
                                     Your account is protected by Two-Factor Authentication. Please enter the generated code from your authenticator app.
@@ -279,13 +349,44 @@ const Login: React.FC = () => {
                                     sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
                                 />
                             </Box>
+                        ) : (
+                            <Box>
+                                <Typography variant="caption" sx={{ mb: 2, display: 'block', color: 'text.secondary' }}>
+                                    We've sent a verification code to your email. Please enter it below to verify your account.
+                                </Typography>
+                                <Typography variant="body2" fontWeight={500} sx={{ mb: 0.5, color: 'text.primary' }}>
+                                    Verification Code
+                                </Typography>
+                                <TextField
+                                    fullWidth
+                                    placeholder="000000"
+                                    value={otpCode}
+                                    onChange={(e) => setOtpCode(e.target.value.slice(0, 6))}
+                                    required
+                                    disabled={loading}
+                                    inputProps={{ maxLength: 6, style: { fontSize: '1.2rem', letterSpacing: '8px', textAlign: 'center' } }}
+                                    sx={{ '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                                />
+                                <Box sx={{ mt: 2, textAlign: 'center' }}>
+                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                        Didn't receive the code?
+                                    </Typography>
+                                    <Button
+                                        onClick={handleResendCode}
+                                        disabled={resendTimer > 0 || loading}
+                                        sx={{ textTransform: 'none', fontWeight: 600 }}
+                                    >
+                                        {resendTimer > 0 ? `Resend Code in ${resendTimer}s` : 'Resend Code'}
+                                    </Button>
+                                </Box>
+                            </Box>
                         )}
 
                         <Button
                             type="submit"
                             fullWidth
                             variant="contained"
-                            disabled={loading}
+                            disabled={loading || (emailVerificationRequired && otpCode.length < 6)}
                             sx={{
                                 mt: 1,
                                 py: 1.25,
@@ -298,8 +399,27 @@ const Login: React.FC = () => {
                                 boxShadow: `0 4px 6px -1px ${alpha(theme.palette.primary.main, 0.2)}`,
                             }}
                         >
-                            {loading ? <CircularProgress size={24} color="inherit" /> : (step2FA ? 'Verify Code' : 'Sign In')}
+                            {loading ? <CircularProgress size={24} color="inherit" /> : (step2FA ? 'Verify Code' : (emailVerificationRequired ? 'Verify Email' : 'Sign In'))}
                         </Button>
+
+                        {emailVerificationRequired && (
+                            <Button
+                                onClick={() => {
+                                    setEmailVerificationRequired(false);
+                                    setOtpCode('');
+                                    setError('');
+                                    setResendTimer(0);
+                                }}
+                                fullWidth
+                                variant="outlined"
+                                sx={{
+                                    textTransform: 'none',
+                                    fontWeight: 600,
+                                }}
+                            >
+                                Back to Login
+                            </Button>
+                        )}
 
                         <Typography variant="body2" sx={{ textAlign: 'center', color: 'text.secondary' }}>
                             New student?{' '}

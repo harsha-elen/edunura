@@ -1,0 +1,3 @@
+2026-03-28T08:23:37.819Z - [deleteFile] Input relativePath: uploads/courses/id_26/assets/resource-1774602392013-207521893.webp
+2026-03-28T08:23:37.827Z - [deleteFile] Resolved absolute filePath: C:\Users\harsh\OneDrive\Desktop\edunura\backend\uploads\courses\id_26\assets\resource-1774602392013-207521893.webp
+2026-03-28T08:23:37.830Z - [deleteFile] ✅ Success: Deleted C:\Users\harsh\OneDrive\Desktop\edunura\backend\uploads\courses\id_26\assets\resource-1774602392013-207521893.webp

@@ -1,13 +1,163 @@
 import { Request, Response } from 'express';
 import Enrollment from '../../models/Enrollment';
 import LessonProgress from '../../models/LessonProgress';
-import User from '../../models/User';
+import User, { UserRole } from '../../models/User';
 import Course from '../../models/Course';
 import CourseSection from '../../models/CourseSection';
 import Lesson from '../../models/Lesson';
 import { EnrollmentStatus } from '../../models/Enrollment';
 import { Op } from 'sequelize';
 import { AuthRequest } from '../../middleware/auth';
+import sequelize from '../../config/database';
+import { sendEmail } from '../../services/emailService';
+
+const generateRandomPassword = (): string => {
+    const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const lower = 'abcdefghijklmnopqrstuvwxyz';
+    const numbers = '0123456789';
+    const special = '!@#$%^&*';
+    const all = upper + lower + numbers + special;
+
+    const pick = (chars: string) => chars[Math.floor(Math.random() * chars.length)];
+    let password = pick(upper) + pick(lower) + pick(numbers) + pick(special);
+    for (let i = 0; i < 8; i += 1) password += pick(all);
+    return password.split('').sort(() => Math.random() - 0.5).join('');
+};
+
+const safeNameFromEmail = (email: string): { firstName: string; lastName: string } => {
+    const local = email.split('@')[0] || 'student';
+    const cleaned = local.replace(/[^a-zA-Z0-9._-]/g, '');
+    const parts = cleaned.split(/[._-]+/).filter(Boolean);
+    const cap = (value: string) => value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+    return {
+        firstName: cap(parts[0] || 'Student'),
+        lastName: cap(parts[1] || 'User'),
+    };
+};
+
+interface ImportRowInput {
+    email?: string;
+    first_name?: string;
+    last_name?: string;
+    phone?: string;
+}
+
+interface ImportRowResult {
+    result: 'enrolled' | 'already_enrolled';
+    userCreated: boolean;
+    email: string;
+    student_id: number;
+}
+
+const processEnrollmentImportRow = async (courseId: number, input: ImportRowInput): Promise<ImportRowResult> => {
+    const transaction = await sequelize.transaction();
+    try {
+        const normalizedEmail = (input.email || '').trim().toLowerCase();
+        if (!normalizedEmail) {
+            throw new Error('Email is mandatory');
+        }
+
+        const course = await Course.findByPk(courseId, { transaction });
+        if (!course) {
+            throw new Error('Course not found');
+        }
+
+        let user = await User.findOne({ where: { email: normalizedEmail }, transaction });
+        let userCreated = false;
+        let generatedPassword: string | null = null;
+
+        if (!user) {
+            const fallback = safeNameFromEmail(normalizedEmail);
+            generatedPassword = generateRandomPassword();
+            user = await User.create({
+                email: normalizedEmail,
+                password: generatedPassword,
+                first_name: (input.first_name || '').trim() || fallback.firstName,
+                last_name: (input.last_name || '').trim() || fallback.lastName,
+                phone: (input.phone || '').trim() || undefined,
+                role: UserRole.STUDENT,
+                is_active: true,
+                is_verified: true,
+            }, { transaction });
+            userCreated = true;
+        }
+
+        if (user.role !== UserRole.STUDENT) {
+            throw new Error(`User exists with role '${user.role}', cannot enroll as student`);
+        }
+
+        const existingEnrollment = await Enrollment.findOne({
+            where: { course_id: courseId, student_id: user.id },
+            transaction,
+        });
+
+        if (existingEnrollment) {
+            await transaction.commit();
+            return {
+                result: 'already_enrolled',
+                userCreated,
+                email: normalizedEmail,
+                student_id: user.id,
+            };
+        }
+
+        if (course.enrollment_limit && course.enrollment_limit > 0) {
+            const currentEnrollments = await Enrollment.count({ where: { course_id: courseId }, transaction });
+            if (currentEnrollments >= course.enrollment_limit) {
+                throw new Error('Course enrollment limit has been reached');
+            }
+        }
+
+        await Enrollment.create({
+            course_id: courseId,
+            student_id: user.id,
+            status: EnrollmentStatus.ACTIVE,
+            enrollment_date: new Date(),
+            progress_percentage: 0,
+        }, { transaction });
+
+        await Course.increment('total_enrollments', {
+            where: { id: courseId },
+            transaction,
+        });
+
+        const courseTitle = course.title || 'your course';
+        const loginUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/login`;
+
+        if (userCreated && generatedPassword) {
+            await sendEmail(
+                normalizedEmail,
+                `Your LMS account and enrollment - ${courseTitle}`,
+                `<h2>Welcome to LMS</h2>
+                 <p>Your account has been created and you are enrolled in <strong>${courseTitle}</strong>.</p>
+                 <p><strong>Email:</strong> ${normalizedEmail}<br/>
+                 <strong>Password:</strong> ${generatedPassword}</p>
+                 <p>Please log in and change your password immediately.</p>
+                 <p><a href="${loginUrl}">Login to LMS</a></p>`
+            );
+        } else {
+            await sendEmail(
+                normalizedEmail,
+                `Enrolled in ${courseTitle}`,
+                `<h2>Course Enrollment Confirmed</h2>
+                 <p>You have been enrolled in <strong>${courseTitle}</strong>.</p>
+                 <p>You can access your course from your dashboard.</p>
+                 <p><a href="${loginUrl}">Login to LMS</a></p>`
+            );
+        }
+
+        await transaction.commit();
+        return {
+            result: 'enrolled',
+            userCreated,
+            email: normalizedEmail,
+            student_id: user.id,
+        };
+    } catch (error) {
+        await transaction.rollback();
+        throw error;
+    }
+};
 
 // Get all enrollments for a course
 export const getCourseEnrollments = async (req: Request, res: Response): Promise<void> => {
@@ -168,6 +318,96 @@ export const enrollStudent = async (req: Request, res: Response): Promise<void> 
             status: 'error',
             message: 'Failed to enroll student',
             error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+        });
+    }
+};
+
+// Import one row for bulk enrollment
+export const importEnrollmentRow = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { courseId } = req.params;
+        const course_id = parseInt(courseId, 10);
+
+        if (isNaN(course_id)) {
+            res.status(400).json({ status: 'error', message: 'Invalid course ID' });
+            return;
+        }
+        const result = await processEnrollmentImportRow(course_id, req.body as ImportRowInput);
+
+        res.status(200).json({
+            status: 'success',
+            data: result,
+        });
+    } catch (error: any) {
+        console.error('Import enrollment row error:', error);
+        res.status(500).json({
+            status: 'error',
+            message: error?.message || 'Failed to process import row',
+        });
+    }
+};
+
+// Server-side bulk import and final summary response
+export const importEnrollmentRowsBulk = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { courseId } = req.params;
+        const course_id = parseInt(courseId, 10);
+        const { rows } = req.body as { rows?: ImportRowInput[] };
+
+        if (isNaN(course_id)) {
+            res.status(400).json({ status: 'error', message: 'Invalid course ID' });
+            return;
+        }
+
+        if (!Array.isArray(rows) || rows.length === 0) {
+            res.status(400).json({ status: 'error', message: 'Rows payload is required' });
+            return;
+        }
+
+        const summary = {
+            totalRows: rows.length,
+            successCount: 0,
+            failedCount: 0,
+            createdUsers: 0,
+            enrolledExisting: 0,
+            alreadyEnrolled: 0,
+            failedRows: [] as Array<{ row: number; reason: string }>,
+        };
+
+        for (let i = 0; i < rows.length; i += 1) {
+            const row = rows[i] || {};
+            const rowNumber = i + 2;
+            try {
+                const result = await processEnrollmentImportRow(course_id, row);
+                summary.successCount += 1;
+
+                if (result.userCreated) {
+                    summary.createdUsers += 1;
+                }
+
+                if (result.result === 'already_enrolled') {
+                    summary.alreadyEnrolled += 1;
+                } else if (!result.userCreated) {
+                    summary.enrolledExisting += 1;
+                }
+            } catch (err: any) {
+                summary.failedCount += 1;
+                summary.failedRows.push({
+                    row: rowNumber,
+                    reason: err?.message || 'Failed to import row',
+                });
+            }
+        }
+
+        res.status(200).json({
+            status: 'success',
+            data: summary,
+        });
+    } catch (error: any) {
+        console.error('Import enrollment rows bulk error:', error);
+        res.status(500).json({
+            status: 'error',
+            message: error?.message || 'Failed to process bulk import',
         });
     }
 };

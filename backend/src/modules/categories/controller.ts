@@ -93,6 +93,8 @@ export const createCategory = async (req: Request, res: Response) => {
             color,
             accent_color,
             display_order,
+            tags_enabled,
+            tags,
             is_featured,
             is_active,
         } = req.body;
@@ -142,6 +144,8 @@ export const createCategory = async (req: Request, res: Response) => {
             color: color || '#2b8cee',
             accent_color: accent_color || '#e8f2fe',
             display_order: display_order || 0,
+            tags_enabled: tags_enabled !== undefined ? Boolean(tags_enabled) : false,
+            tags: Array.isArray(tags) ? tags : [],
             is_featured: is_featured || false,
             is_active: is_active !== undefined ? is_active : true,
             course_count: 0,
@@ -175,6 +179,8 @@ export const updateCategory = async (req: Request, res: Response) => {
             color,
             accent_color,
             display_order,
+            tags_enabled,
+            tags,
             is_featured,
             is_active,
         } = req.body;
@@ -237,6 +243,11 @@ export const updateCategory = async (req: Request, res: Response) => {
         if (color !== undefined) category.color = color;
         if (accent_color !== undefined) category.accent_color = accent_color;
         if (display_order !== undefined) category.display_order = display_order;
+        if (tags_enabled !== undefined) category.tags_enabled = Boolean(tags_enabled);
+        if (tags !== undefined) {
+            category.tags = Array.isArray(tags) ? tags : [];
+            category.changed('tags', true);
+        }
         if (is_featured !== undefined) category.is_featured = is_featured;
         if (is_active !== undefined) category.is_active = is_active;
 

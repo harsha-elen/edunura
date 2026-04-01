@@ -80,6 +80,7 @@ const Students: React.FC = () => {
         last_name: '',
         phone: '',
         is_active: true,
+        is_verified: false,
     });
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
     const [submitting, setSubmitting] = useState(false);
@@ -133,6 +134,7 @@ const Students: React.FC = () => {
                 last_name: student.last_name,
                 phone: student.phone || '',
                 is_active: student.is_active,
+                is_verified: student.is_verified,
             });
             setSelectedStudent(student);
         } else {
@@ -143,6 +145,7 @@ const Students: React.FC = () => {
                 last_name: '',
                 phone: '',
                 is_active: true,
+                is_verified: false,
             });
             setSelectedStudent(null);
         }
@@ -153,7 +156,7 @@ const Students: React.FC = () => {
     const handleCloseDialog = () => {
         setOpenDialog(false);
         setSelectedStudent(null);
-        setFormData({ email: '', password: '', first_name: '', last_name: '', phone: '', is_active: true });
+        setFormData({ email: '', password: '', first_name: '', last_name: '', phone: '', is_active: true, is_verified: false });
         setFormErrors({});
     };
 
@@ -174,7 +177,7 @@ const Students: React.FC = () => {
         setSubmitting(true);
         try {
             if (selectedStudent) {
-                const payload: UpdateStudentPayload = { email: formData.email, first_name: formData.first_name, last_name: formData.last_name, phone: formData.phone || undefined, is_active: formData.is_active };
+                const payload: UpdateStudentPayload = { email: formData.email, first_name: formData.first_name, last_name: formData.last_name, phone: formData.phone || undefined, is_active: formData.is_active, is_verified: formData.is_verified };
                 if (formData.password) payload.password = formData.password;
                 await updateStudent(selectedStudent.id, payload);
                 setSnackbar({ open: true, message: 'Student updated successfully', severity: 'success' });
@@ -398,6 +401,21 @@ const Students: React.FC = () => {
                             <option value="active">Active</option>
                             <option value="inactive">Inactive</option>
                         </TextField>
+                        {selectedStudent && (
+                            <TextField
+                                label="Email Verified"
+                                fullWidth
+                                select
+                                value={formData.is_verified ? 'verified' : 'unverified'}
+                                onChange={(e) => setFormData({ ...formData, is_verified: e.target.value === 'verified' })}
+                                size="small"
+                                SelectProps={{ native: true }}
+                                helperText="Mark whether the student's email has been verified"
+                            >
+                                <option value="verified">Verified</option>
+                                <option value="unverified">Not Verified</option>
+                            </TextField>
+                        )}
                     </Box>
                 </DialogContent>
                 <DialogActions sx={{ p: 2, gap: 1 }}>

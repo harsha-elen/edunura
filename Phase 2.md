@@ -46,3 +46,52 @@ Implemented a comprehensive content drip system that gives instructors granular 
 - **`DripSettingsModal.tsx` (Admin/Teacher — New Component):** Centralized modal for per-lesson drip configuration. Supports all four strategies with date picker, number input, and prerequisite lesson dropdown. Fully theme-aware (no hardcoded colors).
 - **`CurriculumSection.tsx` (Admin & Teacher):** Added a 🔒 icon button alongside each lesson's edit button that opens the `DripSettingsModal`.
 - **`CoursePlayer.tsx` (Student):** Locked lessons display a lock icon in the sidebar instead of a play/check indicator. Clicking a locked lesson renders a "Content Locked" fallback screen with the specific `lock_reason`. All interactive elements (Mark Complete, Tabs, Resources, Discussions) are hidden for locked lessons.
+
+
+#---- Deployment Done Until Here-----
+
+## Phase 2.2 
+
+## 6. Assignment Workflow (Authoring, Submission, and Review)
+Implemented a complete Assignment lifecycle that covers lesson creation (Admin/Teacher), student submission, and instructor review dashboards.
+
+- **Frontend Authoring Refactor:** Unified Assignment lesson creation into the existing text lesson editor by extending `TextMediaLessonUpload` with `lessonKind='assignment'`. This removed duplicated editor flows while preserving role-specific Admin/Teacher UX.
+- **Curriculum Integration:** Updated Admin and Teacher lesson creation modals to save assignment lessons with proper metadata (`content_type: 'assignment'`, rich text instructions, and resource support).
+- **Student Experience (`CoursePlayer`):** Implemented a dedicated assignment lesson render mode with clean blog-style content presentation, PDF upload support, submission status visibility, and graded feedback display.
+- **Role Navigation:** Added Assignment entry points in both sidebars:
+  - Admin → `/admin/assignments`
+  - Teacher → `/teacher/assignments`
+- **Assignments Landing Pages:** Configured Assignments tab to display course cards (same pattern as Courses grid), each with a prominent **Manage Assignments** action.
+- **Course-Scoped Review Routes:** Added dynamic review routes:
+  - `/admin/assignments/[courseId]`
+  - `/teacher/assignments/[courseId]`
+  These routes open the detailed submission dashboard for the selected course.
+- **Submission Dashboard (Shared Component):** Built `AssignmentSubmissionsDashboard` with:
+  - Stat cards (Total Students, Submitted, Pending Review, Class Average)
+  - Status chips and search filters
+  - Submission table (student, assignment, date, status, score)
+  - View popup for grading workflow
+- **Review Popup Enhancements:** Implemented the requested modal structure with:
+  - Assignment title and content
+  - Student submitted document download button
+  - Score out of 100 with remarks
+  - Submit action for final review save
+- **Service Layer Additions (`courseService.ts`):** Added and integrated:
+  - `getAssignmentSubmissionsForTeacher(lessonId)`
+  - `reviewAssignmentSubmission(submissionId, payload)`
+  - `AssignmentSubmission.student` typed object for dashboard rendering
+- **Stability Fix:** Resolved hydration mismatch warning in root layout by adding `suppressHydrationWarning` on `<body>` to tolerate browser extension-injected attributes.
+- **Verification:** Production build completed successfully after all routing, dashboard, and popup updates.
+
+## 7. Admin Email Verification Control (Students & Teachers)
+Implemented admin-level verification management to manually verify or unverify student and teacher accounts from the edit dialog.
+- **Backend:** Extended `updateStudent` and `updateTeacher` controllers to handle `is_verified` parameter.
+- **Frontend:** Added `is_verified` field to Students and Teachers edit dialogs (only visible when editing existing users). Allows toggling between "Verified" / "Not Verified" status.
+- **Services:** Updated `UpdateStudentPayload` and `UpdateTeacherPayload` interfaces to include optional `is_verified` field.
+
+## 8. Email Verification Flow for Old Users (Login-Time Verification)
+Implemented automatic email verification for unverified students and teachers during login, allowing self-service verification instead of blocking account access.
+- **Backend:** Modified `login` endpoint to detect unverified users, generate OTP, send verification email, and return `requiresEmailVerification: true` flag. Added new `POST /auth/verify-email-login` endpoint to validate OTP and complete verification.
+- **Frontend:** Enhanced login page with email verification step (6-digit code input + resend button with 60-second cooldown). Supports three-step flow: Step 1) Login Form → Step 2) Email Verification OR 2FA → Step 3) Authenticated Dashboard.
+- **Security:** OTP expires after 10 minutes. Works independently for both Students and Teachers. Does not interfere with existing 2FA flow.
+

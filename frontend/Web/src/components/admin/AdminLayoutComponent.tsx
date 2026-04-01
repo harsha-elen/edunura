@@ -31,6 +31,7 @@ import {
     Dashboard as DashboardIcon,
     Analytics as AnalyticsIcon,
     Payments as PaymentsIcon,
+    AssignmentTurnedIn as AssignmentTurnedInIcon,
     Settings as SettingsIcon,
     Help as HelpIcon,
     AddCircle as AddCircleIcon,
@@ -130,6 +131,7 @@ const AdminLayoutComponent: React.FC<AdminLayoutComponentProps> = ({ children })
     const allMenuItems = [
         { text: 'Dashboard', icon: <DashboardIcon sx={{ fontSize: 22 }} />, path: '/admin' },
         { text: 'Courses', icon: <SchoolIcon sx={{ fontSize: 22 }} />, path: '/admin/courses' },
+        { text: 'Assignment', icon: <AssignmentTurnedInIcon sx={{ fontSize: 22 }} />, path: '/admin/assignments' },
         {
             text: 'Teachers',
             icon: <Box component="img" src="/images/teacher.ico" alt="Teachers" sx={{ width: 22, height: 22 }} />,

@@ -15,6 +15,7 @@ import {
     PlayCircleOutlined as PlayCircleOutlinedIcon,
     DescriptionOutlined as DescriptionOutlinedIcon,
     Quiz as QuizIcon,
+    AssignmentTurnedIn as AssignmentTurnedInIcon,
     VideocamOutlined as VideocamOutlinedIcon,
     Close as CloseIcon,
     ChevronRight as ChevronRightIcon,
@@ -23,6 +24,8 @@ import VideoLessonUpload from './VideoLessonUpload';
 import TextMediaLessonUpload from './TextMediaLessonUpload';
 import LiveClassLessonUpload from './LiveClassLessonUpload';
 import SimpleLessonModal from './SimpleLessonModal';
+import QuizLessonUpload from '@/components/shared/QuizLessonUpload';
+import { getQuizQuestionsForTeacher } from '@/services/courseService';
 import type { LessonResource } from '@/services/courseService';
 
 interface AddLessonModalProps {
@@ -30,17 +33,27 @@ interface AddLessonModalProps {
     onClose: () => void;
     onAdd: (lessonData: {
         title: string;
-        type: 'video' | 'document' | 'text' | 'quiz' | 'live';
+        type: 'video' | 'document' | 'text' | 'quiz' | 'live' | 'assignment';
         meta: string;
         videoFile?: File;
         resourceFiles?: File[];
         resourcesToDelete?: number[];
+        allowPreview?: boolean;
+        quizQuestions?: Array<{
+            id?: number;
+            question_text: string;
+            question_type: 'multiple_choice' | 'true_false' | 'short_answer';
+            options?: string[];
+            correct_answer: string;
+            explanation?: string;
+            order: number;
+        }>;
     }) => Promise<number | undefined>;
     uploadProgress: Record<number, number>;
     initialData?: {
         id: number;
         title: string;
-        type: 'video' | 'document' | 'text' | 'quiz' | 'live';
+        type: 'video' | 'document' | 'text' | 'quiz' | 'live' | 'assignment';
         meta: string;
         duration?: number;
         is_free_preview?: boolean;
@@ -58,8 +71,10 @@ const AddLessonModal: React.FC<AddLessonModalProps> = ({ open, onClose, onAdd, u
     const [isSimpleModalOpen, setIsSimpleModalOpen] = useState(false);
     const [isLiveClassUploadOpen, setIsLiveClassUploadOpen] = useState(false);
     const [isQuizModalOpen, setIsQuizModalOpen] = useState(false);
+    const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
     const [showLessonTypeSelector, setShowLessonTypeSelector] = useState(true);
     const [activeLiveUploadId, setActiveLiveUploadId] = useState<number | null>(null);
+    const [quizInitialQuestions, setQuizInitialQuestions] = useState<any[]>([]);
 
     React.useEffect(() => {
         if (open) {
@@ -68,6 +83,7 @@ const AddLessonModal: React.FC<AddLessonModalProps> = ({ open, onClose, onAdd, u
                 if (initialData.type === 'video') setIsVideoUploadOpen(true);
                 else if (initialData.type === 'text') setIsTextMediaUploadOpen(true);
                 else if (initialData.type === 'quiz') setIsQuizModalOpen(true);
+                else if (initialData.type === 'assignment') setIsAssignmentModalOpen(true);
                 else if (initialData.type === 'live') setIsLiveClassUploadOpen(true);
             } else {
                 setShowLessonTypeSelector(true);
@@ -76,15 +92,35 @@ const AddLessonModal: React.FC<AddLessonModalProps> = ({ open, onClose, onAdd, u
                 setIsSimpleModalOpen(false);
                 setIsLiveClassUploadOpen(false);
                 setIsQuizModalOpen(false);
+                setIsAssignmentModalOpen(false);
             }
             setActiveLiveUploadId(null);
         }
     }, [open, initialData]);
 
+    React.useEffect(() => {
+        const loadQuizQuestions = async () => {
+            if (!open || !initialData || initialData.type !== 'quiz' || !initialData.id || !courseId) {
+                setQuizInitialQuestions([]);
+                return;
+            }
+
+            try {
+                const response = await getQuizQuestionsForTeacher(courseId, initialData.id);
+                setQuizInitialQuestions(response?.data || []);
+            } catch {
+                setQuizInitialQuestions([]);
+            }
+        };
+
+        void loadQuizQuestions();
+    }, [open, initialData, courseId]);
+
     const lessonTypes = [
         { id: 'video', icon: PlayCircleOutlinedIcon, title: 'Video Lesson', description: 'Upload or embed video content from YouTube, Vimeo, or local files.', bgColor: '#dbeafe', iconColor: '#2b8cee' },
         { id: 'text', icon: DescriptionOutlinedIcon, title: 'Text & Media', description: 'Create rich text lessons with images, formatting, and embedded components.', bgColor: '#d1fae5', iconColor: '#10b981' },
         { id: 'quiz', icon: QuizIcon, title: 'Quiz & Assessment', description: 'Test student knowledge with multiple-choice, true/false, or open-ended questions.', bgColor: '#F3EEFE', iconColor: '#8B5CF6' },
+        { id: 'assignment', icon: AssignmentTurnedInIcon, title: 'Assignment', description: 'Collect student PDF submissions with teacher review workflow.', bgColor: '#fff6d8', iconColor: '#b45309' },
         { id: 'live', icon: VideocamOutlinedIcon, title: 'Live Session', description: 'Schedule a real-time webinar or virtual classroom via Zoom or MS Teams.', bgColor: '#fee2e2', iconColor: '#dc2626' },
     ];
 
@@ -92,9 +128,10 @@ const AddLessonModal: React.FC<AddLessonModalProps> = ({ open, onClose, onAdd, u
         if (typeId === 'video') { setShowLessonTypeSelector(false); setIsVideoUploadOpen(true); return; }
         if (typeId === 'text') { setShowLessonTypeSelector(false); setIsTextMediaUploadOpen(true); return; }
         if (typeId === 'quiz') { setShowLessonTypeSelector(false); setIsQuizModalOpen(true); return; }
+        if (typeId === 'assignment') { setShowLessonTypeSelector(false); setIsAssignmentModalOpen(true); return; }
         if (typeId === 'live') { setShowLessonTypeSelector(false); setIsLiveClassUploadOpen(true); return; }
 
-        const type = typeId as 'video' | 'document' | 'text' | 'quiz' | 'live';
+        const type = typeId as 'video' | 'document' | 'text' | 'quiz' | 'live' | 'assignment';
         const typeLabel = lessonTypes.find(t => t.id === typeId)?.title || typeId;
         onAdd({ title: typeLabel, type, meta: '' });
         handleClose();
@@ -145,19 +182,21 @@ const AddLessonModal: React.FC<AddLessonModalProps> = ({ open, onClose, onAdd, u
         resources: Array<{ name: string; size: string; type: string }>;
         resourceFiles: File[];
         resourcesToDelete: number[];
-    }) => {
+    }, lessonType: 'text' | 'assignment' = 'text') => {
         onAdd({
             title: lessonData.title,
-            type: 'text',
+            type: lessonType,
             meta: JSON.stringify({
                 description: lessonData.description,
                 allowPreview: lessonData.allowPreview,
                 resources: lessonData.resources,
             }),
+            allowPreview: lessonData.allowPreview,
             resourceFiles: lessonData.resourceFiles,
             resourcesToDelete: lessonData.resourcesToDelete,
         });
         setIsTextMediaUploadOpen(false);
+        setIsAssignmentModalOpen(false);
         setShowLessonTypeSelector(true);
         onClose();
     };
@@ -165,6 +204,31 @@ const AddLessonModal: React.FC<AddLessonModalProps> = ({ open, onClose, onAdd, u
     const handleSimpleLessonSave = (lessonData: { title: string; type: 'quiz' | 'live'; meta: string }) => {
         onAdd({ title: lessonData.title, type: lessonData.type, meta: lessonData.meta });
         setIsSimpleModalOpen(false);
+        setShowLessonTypeSelector(true);
+        onClose();
+    };
+
+    const handleQuizSave = (data: {
+        title: string;
+        questions: Array<{
+            id?: number;
+            question_text: string;
+            question_type: 'multiple_choice' | 'true_false' | 'short_answer';
+            options?: string[];
+            correct_answer: string;
+            explanation?: string;
+            order: number;
+        }>;
+    }) => {
+        onAdd({
+            title: data.title,
+            type: 'quiz',
+            meta: JSON.stringify({
+                questions: data.questions,
+            }),
+            quizQuestions: data.questions,
+        });
+        setIsQuizModalOpen(false);
         setShowLessonTypeSelector(true);
         onClose();
     };
@@ -180,6 +244,7 @@ const AddLessonModal: React.FC<AddLessonModalProps> = ({ open, onClose, onAdd, u
     const handleBackFromTextMedia = () => { setIsTextMediaUploadOpen(false); setShowLessonTypeSelector(true); };
     const handleBackFromSimple = () => { setIsSimpleModalOpen(false); setShowLessonTypeSelector(true); };
     const handleBackFromQuiz = () => { setIsQuizModalOpen(false); setShowLessonTypeSelector(true); };
+    const handleBackFromAssignment = () => { setIsAssignmentModalOpen(false); setShowLessonTypeSelector(true); };
 
     const handleClose = () => {
         setIsVideoUploadOpen(false);
@@ -187,6 +252,7 @@ const AddLessonModal: React.FC<AddLessonModalProps> = ({ open, onClose, onAdd, u
         setIsSimpleModalOpen(false);
         setIsLiveClassUploadOpen(false);
         setIsQuizModalOpen(false);
+        setIsAssignmentModalOpen(false);
         setActiveLiveUploadId(null);
         setShowLessonTypeSelector(true);
         onClose();
@@ -268,12 +334,18 @@ const AddLessonModal: React.FC<AddLessonModalProps> = ({ open, onClose, onAdd, u
                 />
             )}
 
-            {/* Quiz placeholder */}
+            {/* Quiz lesson upload */}
             {isQuizModalOpen && (
-                <Box sx={{ p: 4, textAlign: 'center' }}>
-                    <Typography>Quiz Module Coming Soon</Typography>
-                    <Button onClick={handleBackFromQuiz}>Back</Button>
-                </Box>
+                <QuizLessonUpload
+                    open={true}
+                    onClose={handleClose}
+                    onBack={initialData ? undefined : handleBackFromQuiz}
+                    onSave={handleQuizSave}
+                    initialData={initialData && initialData.type === 'quiz' ? {
+                        title: initialData.title,
+                        questions: quizInitialQuestions,
+                    } : undefined}
+                />
             )}
 
             {/* Video Lesson Upload Modal */}
@@ -309,11 +381,12 @@ const AddLessonModal: React.FC<AddLessonModalProps> = ({ open, onClose, onAdd, u
 
             {/* Text Media Lesson Upload Modal */}
             <TextMediaLessonUpload
-                open={isTextMediaUploadOpen}
-                onClose={() => { setIsTextMediaUploadOpen(false); setShowLessonTypeSelector(true); onClose(); }}
-                onBack={handleBackFromTextMedia}
-                onSave={handleTextMediaLessonSave}
-                initialData={initialData && initialData.type === 'text' ? (() => {
+                open={isTextMediaUploadOpen || isAssignmentModalOpen}
+                onClose={() => { setIsTextMediaUploadOpen(false); setIsAssignmentModalOpen(false); setShowLessonTypeSelector(true); onClose(); }}
+                onBack={isAssignmentModalOpen ? handleBackFromAssignment : handleBackFromTextMedia}
+                onSave={(data) => handleTextMediaLessonSave(data, isAssignmentModalOpen ? 'assignment' : 'text')}
+                lessonKind={isAssignmentModalOpen ? 'assignment' : 'text'}
+                initialData={initialData && (initialData.type === 'text' || initialData.type === 'assignment') ? (() => {
                     const mappedResources = (initialData.resources || []).map(r => ({ id: r.id, name: r.title, size: r.file_size, type: r.file_type }));
                     try {
                         const meta = JSON.parse(initialData.meta);

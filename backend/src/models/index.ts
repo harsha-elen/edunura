@@ -10,6 +10,10 @@ import Enrollment from './Enrollment';
 import LessonProgress from './LessonProgress';
 import Payment from './Payment';
 import LessonDiscussion from './LessonDiscussion';
+import QuizQuestion from './QuizQuestion';
+import QuizQuestionOption from './QuizQuestionOption';
+import QuizAttempt from './QuizAttempt';
+import AssignmentSubmission from './AssignmentSubmission';
 
 // Define associations
 export const initializeAssociations = () => {
@@ -155,6 +159,72 @@ export const initializeAssociations = () => {
         foreignKey: 'user_id',
         as: 'user',
     });
+
+    // Lesson - QuizQuestion relationship
+    Lesson.hasMany(QuizQuestion, {
+        foreignKey: 'lesson_id',
+        as: 'quiz_questions',
+    });
+
+    QuizQuestion.belongsTo(Lesson, {
+        foreignKey: 'lesson_id',
+        as: 'lesson',
+    });
+
+    // QuizQuestion - QuizQuestionOption relationship
+    QuizQuestion.hasMany(QuizQuestionOption, {
+        foreignKey: 'question_id',
+        as: 'options',
+    });
+
+    QuizQuestionOption.belongsTo(QuizQuestion, {
+        foreignKey: 'question_id',
+        as: 'question',
+    });
+
+    // Lesson - QuizAttempt relationship
+    Lesson.hasMany(QuizAttempt, {
+        foreignKey: 'lesson_id',
+        as: 'quiz_attempts',
+    });
+
+    QuizAttempt.belongsTo(Lesson, {
+        foreignKey: 'lesson_id',
+        as: 'lesson',
+    });
+
+    // User - QuizAttempt relationship
+    User.hasMany(QuizAttempt, {
+        foreignKey: 'student_id',
+        as: 'quiz_attempts',
+    });
+
+    QuizAttempt.belongsTo(User, {
+        foreignKey: 'student_id',
+        as: 'student',
+    });
+
+    // Lesson - AssignmentSubmission relationship
+    Lesson.hasMany(AssignmentSubmission, {
+        foreignKey: 'lesson_id',
+        as: 'assignment_submissions',
+    });
+
+    AssignmentSubmission.belongsTo(Lesson, {
+        foreignKey: 'lesson_id',
+        as: 'lesson',
+    });
+
+    // User - AssignmentSubmission relationship
+    User.hasMany(AssignmentSubmission, {
+        foreignKey: 'student_id',
+        as: 'assignment_submissions',
+    });
+
+    AssignmentSubmission.belongsTo(User, {
+        foreignKey: 'student_id',
+        as: 'student',
+    });
 };
 
 export {
@@ -170,4 +240,8 @@ export {
     LessonProgress,
     Payment,
     LessonDiscussion,
+    QuizQuestion,
+    QuizQuestionOption,
+    QuizAttempt,
+    AssignmentSubmission,
 };

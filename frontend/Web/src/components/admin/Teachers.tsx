@@ -61,6 +61,7 @@ const Teachers: React.FC = () => {
         last_name: '',
         phone: '',
         is_active: true,
+        is_verified: false,
     });
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
     const [submitting, setSubmitting] = useState(false);
@@ -101,6 +102,7 @@ const Teachers: React.FC = () => {
                 last_name: teacher.last_name,
                 phone: teacher.phone || '',
                 is_active: teacher.is_active,
+                is_verified: teacher.is_verified,
             });
             setSelectedTeacher(teacher);
         } else {
@@ -111,6 +113,7 @@ const Teachers: React.FC = () => {
                 last_name: '',
                 phone: '',
                 is_active: true,
+                is_verified: false,
             });
             setSelectedTeacher(null);
         }
@@ -128,6 +131,7 @@ const Teachers: React.FC = () => {
             last_name: '',
             phone: '',
             is_active: true,
+            is_verified: false,
         });
         setFormErrors({});
     };
@@ -171,6 +175,7 @@ const Teachers: React.FC = () => {
                     last_name: formData.last_name,
                     phone: formData.phone || undefined,
                     is_active: formData.is_active,
+                    is_verified: formData.is_verified,
                 };
                 if (formData.password) {
                     payload.password = formData.password;
@@ -426,6 +431,21 @@ const Teachers: React.FC = () => {
                             <option value="active">Active</option>
                             <option value="inactive">Inactive</option>
                         </TextField>
+                        {selectedTeacher && (
+                            <TextField
+                                label="Email Verified"
+                                fullWidth
+                                select
+                                value={formData.is_verified ? 'verified' : 'unverified'}
+                                onChange={(e) => setFormData({ ...formData, is_verified: e.target.value === 'verified' })}
+                                size="small"
+                                SelectProps={{ native: true }}
+                                helperText="Mark whether the teacher's email has been verified"
+                            >
+                                <option value="verified">Verified</option>
+                                <option value="unverified">Not Verified</option>
+                            </TextField>
+                        )}
                     </Box>
                 </DialogContent>
                 <DialogActions sx={{ p: 2, gap: 1 }}>

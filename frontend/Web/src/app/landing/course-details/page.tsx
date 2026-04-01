@@ -52,6 +52,7 @@ interface CourseDetail {
     prerequisites?: string[];
     enable_certificate?: boolean;
     duration_hours?: number;
+    validity_period?: number | null;
     updated_at?: string;
     creator?: Creator;
     sections?: Section[];
@@ -72,6 +73,23 @@ function fmtDuration(mins?: number) {
     if (!mins) return '';
     const h = Math.floor(mins / 60), m = mins % 60;
     return h ? (m ? `${h}h ${m}m` : `${h}h`) : `${m}m`;
+}
+function fmtAccessLabel(validityDays?: number | null) {
+    const days = Number(validityDays || 0);
+    if (!days || days <= 0) return 'Lifetime access';
+    if (days % 365 === 0) {
+        const years = days / 365;
+        return `${years} year${years === 1 ? '' : 's'} access`;
+    }
+    if (days % 30 === 0) {
+        const months = days / 30;
+        return `${months} month${months === 1 ? '' : 's'} access`;
+    }
+    if (days % 7 === 0) {
+        const weeks = days / 7;
+        return `${weeks} week${weeks === 1 ? '' : 's'} access`;
+    }
+    return `${days} day${days === 1 ? '' : 's'} access`;
 }
 function sectionsTotal(sections: Section[]) {
     return sections.flatMap(s => s.lessons).reduce((a, l) => a + (l.duration ?? 0), 0);
@@ -190,10 +208,28 @@ const CourseDetailsContent = () => {
     const instructorName = course?.creator ? `${course.creator.first_name} ${course.creator.last_name}` : 'Instructor';
     const rating = course?.rating ?? 0;
     const sections = toArray(course?.sections);
-    const discountPct = course && !course.is_free && course.discounted_price && parseFloat(course.discounted_price) > 0 && parseFloat(course.price) > 0
-        ? Math.round((1 - parseFloat(course.discounted_price) / parseFloat(course.price)) * 100) : 0;
-    const displayPrice = !course ? '' : course.is_free ? 'Free' : course.discounted_price && parseFloat(course.discounted_price) > 0 ? fmtPrice(course.discounted_price) : fmtPrice(course.price);
-    const originalPrice = !course || course.is_free ? '' : (course.discounted_price && parseFloat(course.discounted_price) > 0 ? fmtPrice(course.price) : '');
+    const basePrice = course ? parseFloat(course.price || '0') : 0;
+    const discountedPrice = course ? parseFloat(course.discounted_price || '0') : 0;
+    const effectivePrice = course && !course.is_free && discountedPrice > 0 && basePrice > discountedPrice
+        ? discountedPrice
+        : basePrice;
+    const validityDays = Number(course?.validity_period || 0);
+    const validityMonths = validityDays > 0 && validityDays % 30 === 0 ? validityDays / 30 : 0;
+    const monthlyPriceLabel =
+        course && !course.is_free && validityMonths >= 1
+            ? `₹${(effectivePrice / validityMonths).toLocaleString('en-IN', { maximumFractionDigits: 0 })}/month`
+            : '';
+    const discountPct = course && !course.is_free && discountedPrice > 0 && basePrice > 0
+        ? Math.round((1 - discountedPrice / basePrice) * 100) : 0;
+    const displayPrice = !course
+        ? ''
+        : course.is_free
+            ? 'Free'
+            : monthlyPriceLabel || `₹${effectivePrice.toLocaleString('en-IN')}`;
+    const originalPrice = !course || course.is_free || monthlyPriceLabel
+        ? ''
+        : (discountedPrice > 0 && basePrice > discountedPrice ? fmtPrice(course.price) : '');
+    const accessLabel = fmtAccessLabel(course?.validity_period);
 
     return (
         <main className="flex-grow w-full max-w-[1400px] mx-auto px-4 md:px-8 py-6">
@@ -266,12 +302,6 @@ const CourseDetailsContent = () => {
                                             : <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center border border-white/30 text-white text-sm font-bold">{instructorName.charAt(0)}</div>}
                                         <span className="text-sm font-medium">Created by <span className="text-primary">{instructorName}</span></span>
                                     </div>
-                                    {course.total_enrollments > 0 && (
-                                        <div className="flex items-center gap-1 text-sm text-slate-300">
-                                            <span className="material-symbols-outlined text-[16px]">group</span>
-                                            <span>{course.total_enrollments.toLocaleString('en-IN')} students</span>
-                                        </div>
-                                    )}
                                 </div>
                             </div>
                         </div>
@@ -345,7 +375,7 @@ const CourseDetailsContent = () => {
                     <div className="lg:col-span-1">
                         <div className="sticky top-24 flex flex-col gap-6">
                             <div className="bg-white rounded-xl border border-slate-200 shadow-lg overflow-hidden">
-                                <div className="h-48 w-full bg-slate-100 relative group cursor-pointer" onClick={() => course.intro_video && setVideoOpen(true)}>
+                                <div className="w-full aspect-video bg-slate-100 relative group cursor-pointer" onClick={() => course.intro_video && setVideoOpen(true)}>
                                     {thumbUrl
                                         ? <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url("${thumbUrl}")` }} />
                                         : <div className="absolute inset-0 bg-gradient-to-br from-slate-300 to-slate-400" />}
@@ -393,7 +423,7 @@ const CourseDetailsContent = () => {
                                             )}
                                             <li className="flex items-center gap-3 text-sm text-slate-600">
                                                 <span className="material-symbols-outlined text-[20px] text-slate-400">all_inclusive</span>
-                                                <span className="font-display">Full lifetime access</span>
+                                                <span className="font-display">{accessLabel}</span>
                                             </li>
                                             <li className="flex items-center gap-3 text-sm text-slate-600">
                                                 <span className="material-symbols-outlined text-[20px] text-slate-400">smartphone</span>

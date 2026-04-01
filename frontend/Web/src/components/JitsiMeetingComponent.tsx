@@ -17,35 +17,7 @@ interface JitsiMeetingProps {
     sendHeartbeat?: () => void;
 }
 
-const MODERATOR_BUTTONS = [
-    'microphone',
-    'camera',
-    'desktop',
-    'fullscreen',
-    'fodeviceselection',
-    'hangup',
-    'profile',
-    'chat',
-    'settings',
-    'raisehand',
-    'videoquality',
-    'filmstrip',
-    'feedback',
-    'stats',
-    'shortcuts',
-    'tileview',
-    'download',
-    'help',
-    'e2ee',
-    'security',
-    'recording',
-    'livestream',
-    'whiteboard',
-    'mute-everyone',
-    'sharedvideo',
-    'videobackgroundblur',
-];
-
+// Participants get a restricted toolbar — no recording, mute-everyone, etc.
 const PARTICIPANT_BUTTONS = [
     'microphone',
     'camera',
@@ -67,6 +39,48 @@ const PARTICIPANT_BUTTONS = [
     'help',
     'e2ee',
     'security',
+];
+
+// Moderators get ALL toolbar buttons explicitly listed.
+// IMPORTANT: In iframe mode, Jitsi uses a reduced default toolbar that
+// EXCLUDES 'recording'. We must explicitly include every button we want.
+// (When visiting class.edunura.com directly, all buttons show by default,
+// but inside an iframe, only the iframe-default subset shows.)
+const MODERATOR_BUTTONS = [
+    'microphone',
+    'camera',
+    'desktop',
+    'fullscreen',
+    'fodeviceselection',
+    'hangup',
+    'profile',
+    'chat',
+    'closedcaptions',
+    'settings',
+    'raisehand',
+    'videoquality',
+    'filmstrip',
+    'feedback',
+    'stats',
+    'shortcuts',
+    'tileview',
+    'download',
+    'help',
+    'e2ee',
+    'security',
+    'recording',
+    'livestreaming',
+    'noisesuppression',
+    'participants-pane',
+    'select-background',
+    'shareaudio',
+    'sharedvideo',
+    'toggle-camera',
+    'whiteboard',
+    'highlight',
+    'invite',
+    'embedmeeting',
+    'etherpad',
 ];
 
 const JitsiMeetingComponent: React.FC<JitsiMeetingProps> = ({
@@ -101,6 +115,8 @@ const JitsiMeetingComponent: React.FC<JitsiMeetingProps> = ({
             onConferenceLeftRef.current?.();
         }
     }, [meetingEnded]);
+    // Moderators: explicit full toolbar (iframe mode hides recording by default).
+    // Participants: restricted toolbar.
     const toolbarButtons = isModerator ? MODERATOR_BUTTONS : PARTICIPANT_BUTTONS;
 
     useEffect(() => {
@@ -119,24 +135,31 @@ const JitsiMeetingComponent: React.FC<JitsiMeetingProps> = ({
         apiRef.current = api;
         hasLeftRef.current = false;
         setApiReady(true);
-        console.log('[JITSI] API ready');
+        console.log('[JITSI] API ready, isModerator (LMS):', isModerator);
 
-        // Shared handler with once-guard to prevent double-firing.
-        // NOTE: onConferenceLeft is NOT called here — it's called from the
-        // useEffect that watches meetingEnded. This ensures router.replace/push
-        // runs inside React's lifecycle context (not inside a Jitsi postMessage
-        // callback), which is required for Next.js App Router navigation to work.
+        // Set iframe permissions using the External API's own getIFrame() method.
+        // This is more reliable than querying the DOM from getIFrameRef callback.
+        try {
+            const iframe = api.getIFrame();
+            if (iframe) {
+                iframe.allow = 'camera; microphone; display-capture; fullscreen; autoplay; clipboard-write; clipboard-read; storage-access; downloads';
+                iframe.setAttribute('allowfullscreen', 'true');
+                console.log('[JITSI DEBUG] iframe allow set via api.getIFrame():', iframe.allow);
+                console.log('[JITSI DEBUG] iframe src:', iframe.src);
+            }
+        } catch (e) {
+            console.warn('[JITSI DEBUG] getIFrame() failed:', e);
+        }
+
         const handleLeave = () => {
             if (hasLeftRef.current) return;
             hasLeftRef.current = true;
-            // Immediately hide the iframe so Jitsi's post-call page never shows.
-            // Triggering meetingEnded=true will cause the useEffect to call onConferenceLeft.
             setMeetingEnded(true);
             console.log('[JITSI] Conference ended — hiding iframe, redirecting back to app');
         };
 
-        api.addListener('videoConferenceJoined', () => {
-            console.log('[JITSI] Conference joined');
+        api.addListener('videoConferenceJoined', (data: any) => {
+            console.log('[JITSI] Conference joined:', JSON.stringify(data));
             onConferenceJoined?.();
         });
 
@@ -146,17 +169,14 @@ const JitsiMeetingComponent: React.FC<JitsiMeetingProps> = ({
         // Fires when Jitsi close page would normally show (prevents redirect to Jitsi homepage)
         api.addListener('readyToClose', handleLeave);
 
-        // If this user joined as a participant (not moderator) but Jitsi promotes
-        // them to moderator (because the real host left), auto-leave to prevent
-        // students from gaining moderator controls.
-        if (!isModerator) {
-            api.addListener('participantRoleChanged', (event: { id: string; role: string }) => {
-                if (event.role === 'moderator') {
-                    console.log('[JITSI] Student auto-promoted to moderator — leaving meeting');
-                    handleLeave();
-                }
-            });
-        }
+        // Track ALL role changes for debugging + auto-kick students promoted to moderator.
+        api.addListener('participantRoleChanged', (event: { id: string; role: string }) => {
+            console.log('[JITSI DEBUG] participantRoleChanged:', JSON.stringify(event));
+            if (!isModerator && event.role === 'moderator') {
+                console.log('[JITSI] Student auto-promoted to moderator — leaving meeting');
+                handleLeave();
+            }
+        });
     }, [onConferenceJoined, isModerator]);
 
     // Jitsi SDK expects domain name only (e.g., "meet.edunura.com"), not full URL
@@ -211,6 +231,9 @@ const JitsiMeetingComponent: React.FC<JitsiMeetingProps> = ({
                         disableShareRoom: true,
                         enableClosePage: false,
                         enableUserRolesBasedOnToken: true,
+                        // Explicitly list all toolbar buttons. In iframe mode, Jitsi
+                        // uses a reduced default set that EXCLUDES 'recording'.
+                        toolbarButtons,
                         // Modern Jitsi: defaultLogoUrl replaces the top-left watermark image
                         defaultLogoUrl: logoUrl || '',
                         branding: {

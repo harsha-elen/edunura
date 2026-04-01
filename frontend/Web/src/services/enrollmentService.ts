@@ -34,6 +34,30 @@ export interface AvailableStudent {
     avatar?: string;
 }
 
+export interface BulkEnrollRowPayload {
+    email: string;
+    first_name?: string;
+    last_name?: string;
+    phone?: string;
+}
+
+export interface BulkEnrollRowResult {
+    result: 'enrolled' | 'already_enrolled';
+    userCreated: boolean;
+    email: string;
+    student_id: number;
+}
+
+export interface BulkEnrollSummary {
+    totalRows: number;
+    successCount: number;
+    failedCount: number;
+    createdUsers: number;
+    enrolledExisting: number;
+    alreadyEnrolled: number;
+    failedRows: Array<{ row: number; reason: string }>;
+}
+
 // ─── Student-facing APIs ──────────────────────────────────────
 
 export const getEnrollments = async (params?: Record<string, unknown>) => {
@@ -90,5 +114,21 @@ export const searchAvailableStudents = async (
     const response = await apiClient.get(`/courses/${courseId}/available-students`, {
         params: { search, page, limit },
     });
+    return response.data.data;
+};
+
+export const importEnrollmentRow = async (
+    courseId: number,
+    payload: BulkEnrollRowPayload
+): Promise<BulkEnrollRowResult> => {
+    const response = await apiClient.post(`/courses/${courseId}/enrollments/import-row`, payload);
+    return response.data.data;
+};
+
+export const importEnrollmentRowsBulk = async (
+    courseId: number,
+    rows: BulkEnrollRowPayload[]
+): Promise<BulkEnrollSummary> => {
+    const response = await apiClient.post(`/courses/${courseId}/enrollments/import-bulk`, { rows });
     return response.data.data;
 };

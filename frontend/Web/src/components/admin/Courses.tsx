@@ -442,6 +442,8 @@ const Courses: React.FC = () => {
                                             </Box>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                                 <IconButton
+                                                    component={Link}
+                                                    href={`/course-details?id=${course.id}`}
                                                     sx={{
                                                         width: 40,
                                                         height: 40,

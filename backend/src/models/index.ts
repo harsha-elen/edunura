@@ -14,6 +14,7 @@ import QuizQuestion from './QuizQuestion';
 import QuizQuestionOption from './QuizQuestionOption';
 import QuizAttempt from './QuizAttempt';
 import AssignmentSubmission from './AssignmentSubmission';
+import GenoToken from './GenoToken';
 
 // Define associations
 export const initializeAssociations = () => {
@@ -244,4 +245,5 @@ export {
     QuizQuestionOption,
     QuizAttempt,
     AssignmentSubmission,
+    GenoToken,
 };

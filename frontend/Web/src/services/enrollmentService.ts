@@ -132,3 +132,17 @@ export const importEnrollmentRowsBulk = async (
     const response = await apiClient.post(`/courses/${courseId}/enrollments/import-bulk`, { rows });
     return response.data.data;
 };
+
+// ─── Geneo SSO Integration ──────────────────────────────────────
+
+export interface GenoTokenResponse {
+    uid: string;
+    token: string;
+    expires_at: string;
+    sso_url: string;
+}
+
+export const generateGenoToken = async (): Promise<GenoTokenResponse> => {
+    const response = await apiClient.post('/geneo/generate-token');
+    return response.data.data;
+};

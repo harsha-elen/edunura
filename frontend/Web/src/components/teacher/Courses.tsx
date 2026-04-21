@@ -24,6 +24,7 @@ import {
 } from '@mui/icons-material';
 import Link from 'next/link';
 import { getCourses } from '@/services/courseService';
+import { generateGenoToken } from '@/services/enrollmentService';
 import { STATIC_ASSETS_BASE_URL } from '@/services/apiClient';
 
 const getStatusStyles = (status: string) => {
@@ -47,6 +48,7 @@ interface Course {
     thumbnail: string;
     instructors: string | any[];
     enrolledStudents?: number;
+    geneo_enabled?: boolean;
 }
 
 const TeacherCourses: React.FC = () => {
@@ -57,6 +59,8 @@ const TeacherCourses: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('All Categories');
     const [statusFilter, setStatusFilter] = useState('All Status');
+    const [geneoLoading, setGeneoLoading] = useState(false);
+    const [geneoError, setGeneoError] = useState<string | null>(null);
 
     useEffect(() => {
         loadCourses();
@@ -142,6 +146,22 @@ const TeacherCourses: React.FC = () => {
         }
     };
 
+    const hasGeneoEnabledCourses = courses.some(course => course.geneo_enabled === true);
+
+    const handleOpenInGeneo = async () => {
+        try {
+            setGeneoLoading(true);
+            setGeneoError(null);
+            const tokenData = await generateGenoToken();
+            window.open(tokenData.sso_url, '_blank', 'noopener,noreferrer');
+        } catch (err: any) {
+            console.error('Error generating Geneo token:', err);
+            setGeneoError(err.response?.data?.message || 'Failed to open Geneo. Please try again.');
+        } finally {
+            setGeneoLoading(false);
+        }
+    };
+
     return (
         <Box sx={{ bgcolor: '#f6f7f8', minHeight: '100%', p: { xs: 2, md: 4 } }}>
             <Box sx={{ maxWidth: '1400px', mx: 'auto', display: 'flex', flexDirection: 'column', gap: 3.5 }}>
@@ -163,6 +183,22 @@ const TeacherCourses: React.FC = () => {
                         </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        {hasGeneoEnabledCourses && (
+                            <Button
+                                variant="contained"
+                                onClick={handleOpenInGeneo}
+                                disabled={geneoLoading}
+                                sx={{
+                                    borderRadius: 2,
+                                    textTransform: 'none',
+                                    fontWeight: 600,
+                                    backgroundColor: '#4F46E5',
+                                    '&:hover': { backgroundColor: '#4338CA' },
+                                }}
+                            >
+                                {geneoLoading ? 'Opening Geneo...' : 'Open in Geneo'}
+                            </Button>
+                        )}
                         <Chip
                             label="View Only"
                             variant="outlined"
@@ -261,6 +297,12 @@ const TeacherCourses: React.FC = () => {
                 {error && !loading && (
                     <Alert severity="error" sx={{ mb: 3, p: 2.5 }}>
                         {error}
+                    </Alert>
+                )}
+
+                {geneoError && (
+                    <Alert severity="error" sx={{ mb: 3, p: 2.5 }} onClose={() => setGeneoError(null)}>
+                        {geneoError}
                     </Alert>
                 )}
 

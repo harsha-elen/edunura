@@ -37,6 +37,9 @@ export const createCourse = async (req: AuthRequest, res: Response): Promise<voi
             meta_title,
             meta_description,
             is_sequential,
+            geneo_enabled,
+            geneo_class,
+            geneo_subject,
         } = req.body;
         const userId = req.userId;
 
@@ -85,6 +88,9 @@ export const createCourse = async (req: AuthRequest, res: Response): Promise<voi
             meta_title: meta_title || null,
             meta_description: meta_description || null,
             is_sequential: is_sequential !== undefined ? is_sequential : false,
+            geneo_enabled: geneo_enabled !== undefined ? geneo_enabled : false,
+            geneo_class: geneo_enabled ? geneo_class : null,
+            geneo_subject: geneo_enabled ? geneo_subject : null,
         });
 
         // Create course folder structure
@@ -505,6 +511,9 @@ export const updateCourse = async (req: AuthRequest, res: Response): Promise<voi
             meta_title,
             meta_description,
             is_sequential,
+            geneo_enabled,
+            geneo_class,
+            geneo_subject,
         } = req.body;
         const userId = req.userId;
 
@@ -575,6 +584,17 @@ export const updateCourse = async (req: AuthRequest, res: Response): Promise<voi
         if (meta_title !== undefined) course.meta_title = meta_title;
         if (meta_description !== undefined) course.meta_description = meta_description;
         if (is_sequential !== undefined) course.is_sequential = is_sequential;
+
+        // Geneo Integration
+        if (geneo_enabled !== undefined) course.geneo_enabled = geneo_enabled;
+        if (geneo_enabled) {
+            if (geneo_class !== undefined) course.geneo_class = geneo_class;
+            if (geneo_subject !== undefined) course.geneo_subject = geneo_subject;
+        } else {
+            // Clear geneo fields if disabled
+            course.geneo_class = null;
+            course.geneo_subject = null;
+        }
 
         await course.save();
 

@@ -18,6 +18,7 @@ import liveClassRoutes from './modules/live-classes/routes';
 import enrollmentRoutes from './modules/enrollments/routes';
 import paymentRoutes from './modules/payments/routes';
 import quizRoutes from './modules/quiz/routes';
+import genoRoutes from './modules/geneo/routes';
 import { initializeAssociations } from './models';
 import { seedAdminIfNeeded } from './scripts/seedAdminUser';
 
@@ -99,6 +100,9 @@ app.use('/api/categories', categoriesRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/live-classes', liveClassRoutes);
 app.use('/api/payments', paymentRoutes);
+// Geneo must be registered before the broad /api routers (enrollments, quiz)
+// because those use router.use(authenticate) which would intercept all /api/* paths.
+app.use('/api', genoRoutes);
 app.use('/api', enrollmentRoutes);
 app.use('/api', quizRoutes);
 

@@ -19,6 +19,8 @@ import {
     LinearProgress,
     Snackbar,
     Alert,
+    Switch,
+    FormControlLabel,
 } from '@mui/material';
 import {
     NavigateNext as NavigateNextIcon,
@@ -98,6 +100,9 @@ const CreateCourse: React.FC<CreateCourseProps> = ({ editCourseId }) => {
     const [ratingEnabled, setRatingEnabled] = useState(false);
     const [certEnabled, setCertEnabled] = useState(true);
     const [isSequential, setIsSequential] = useState(false);
+    const [geneoEnabled, setGeneoEnabled] = useState(false);
+    const [selectedClass, setSelectedClass] = useState('');
+    const [selectedSubject, setSelectedSubject] = useState('');
     const [visibility, setVisibility] = useState<'draft' | 'published'>('draft');
     const [metaTitle, setMetaTitle] = useState('');
     const [metaDescription, setMetaDescription] = useState('');
@@ -265,6 +270,11 @@ const CreateCourse: React.FC<CreateCourseProps> = ({ editCourseId }) => {
                 setMetaTitle(course.meta_title || '');
                 setMetaDescription(course.meta_description || '');
 
+                // Geneo Integration
+                setGeneoEnabled(course.geneo_enabled ?? false);
+                setSelectedClass(course.geneo_class || '');
+                setSelectedSubject(course.geneo_subject || '');
+
                 setCourseId(course.id);
             } catch (error) {
                 console.error('Failed to load course:', error);
@@ -343,6 +353,9 @@ const CreateCourse: React.FC<CreateCourseProps> = ({ editCourseId }) => {
             show_course_rating: ratingEnabled,
             enable_certificate: certEnabled,
             is_sequential: isSequential,
+            geneo_enabled: geneoEnabled,
+            geneo_class: geneoEnabled ? selectedClass : null,
+            geneo_subject: geneoEnabled ? selectedSubject : null,
             visibility,
             meta_title: metaTitle,
             meta_description: metaDescription,
@@ -1361,6 +1374,111 @@ const CreateCourse: React.FC<CreateCourseProps> = ({ editCourseId }) => {
                                                 </Typography>
                                             </Box>
                                         ))}
+
+                                        {/* Geneo Integration Toggle */}
+                                        <Box sx={{ mt: 3, pt: 3, borderTop: '1px solid #e7edf3' }}>
+                                            <Box
+                                                sx={{
+                                                    p: 2.5,
+                                                    bgcolor: '#f8fafc',
+                                                    border: '1px solid #e7edf3',
+                                                    borderRadius: 1.5,
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'space-between'
+                                                }}
+                                            >
+                                                <Box>
+                                                    <Typography variant="body2" sx={{ fontWeight: 600, mb: 0.5 }}>
+                                                        🎓 Enable Geneo Access
+                                                    </Typography>
+                                                    <Typography variant="caption" sx={{ color: '#64748b' }}>
+                                                        {geneoEnabled
+                                                            ? 'Active - Students can access this course in Geneo'
+                                                            : 'Inactive - This course is only available in Edunura'}
+                                                    </Typography>
+                                                </Box>
+                                                <FormControlLabel
+                                                    control={
+                                                        <Switch
+                                                            checked={geneoEnabled}
+                                                            onChange={(e) => setGeneoEnabled(e.target.checked)}
+                                                            sx={{
+                                                                '& .MuiSwitch-switchBase.Mui-checked': {
+                                                                    color: theme.palette.primary.main
+                                                                },
+                                                                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                                                                    backgroundColor: theme.palette.primary.main
+                                                                }
+                                                            }}
+                                                        />
+                                                    }
+                                                    label=""
+                                                    sx={{ m: 0 }}
+                                                />
+                                            </Box>
+
+                                            {/* Class and Subject Dropdowns - Only show when Geneo is enabled */}
+                                            {geneoEnabled && (
+                                                <Box sx={{ mt: 2.5, display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                                                    <Box>
+                                                        <Typography variant="body2" sx={{ fontWeight: 600, mb: 1, color: '#0d141b' }}>
+                                                            Class <span style={{ color: '#dc2626' }}>*</span>
+                                                        </Typography>
+                                                        <Select
+                                                            displayEmpty
+                                                            value={selectedClass}
+                                                            onChange={(e) => setSelectedClass(e.target.value)}
+                                                            fullWidth
+                                                            size="small"
+                                                            sx={{
+                                                                backgroundColor: '#f6f7f8',
+                                                                borderRadius: 1.5,
+                                                                '& fieldset': { borderColor: '#e7edf3' },
+                                                                '&:hover fieldset': { borderColor: '#cbd5e1' },
+                                                                '&.Mui-focused fieldset': { borderColor: theme.palette.primary.main },
+                                                            }}
+                                                        >
+                                                            <MenuItem disabled value="">
+                                                                Select a class
+                                                            </MenuItem>
+                                                            {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((classNum) => (
+                                                                <MenuItem key={classNum} value={classNum.toString()}>
+                                                                    Class {classNum}
+                                                                </MenuItem>
+                                                            ))}
+                                                        </Select>
+                                                    </Box>
+
+                                                    <Box>
+                                                        <Typography variant="body2" sx={{ fontWeight: 600, mb: 1, color: '#0d141b' }}>
+                                                            Subject <span style={{ color: '#dc2626' }}>*</span>
+                                                        </Typography>
+                                                        <Select
+                                                            displayEmpty
+                                                            value={selectedSubject}
+                                                            onChange={(e) => setSelectedSubject(e.target.value)}
+                                                            fullWidth
+                                                            size="small"
+                                                            sx={{
+                                                                backgroundColor: '#f6f7f8',
+                                                                borderRadius: 1.5,
+                                                                '& fieldset': { borderColor: '#e7edf3' },
+                                                                '&:hover fieldset': { borderColor: '#cbd5e1' },
+                                                                '&.Mui-focused fieldset': { borderColor: theme.palette.primary.main },
+                                                            }}
+                                                        >
+                                                            <MenuItem disabled value="">
+                                                                Select a subject
+                                                            </MenuItem>
+                                                            <MenuItem value="maths">Maths</MenuItem>
+                                                            <MenuItem value="physics">Physics</MenuItem>
+                                                            <MenuItem value="science">Science</MenuItem>
+                                                        </Select>
+                                                    </Box>
+                                                </Box>
+                                            )}
+                                        </Box>
                                     </Box>
                                 </Box>
                             </Paper>

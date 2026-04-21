@@ -37,6 +37,7 @@ import {
     AddCircle as AddCircleIcon,
     SupervisedUserCircle as UsersIcon,
     Person as PersonIcon,
+    LocalOffer as CouponIcon,
 } from '@mui/icons-material';
 import { useRouter, usePathname } from 'next/navigation';
 import { getSettings } from '@/services/settings';
@@ -131,6 +132,7 @@ const AdminLayoutComponent: React.FC<AdminLayoutComponentProps> = ({ children })
     const allMenuItems = [
         { text: 'Dashboard', icon: <DashboardIcon sx={{ fontSize: 22 }} />, path: '/admin' },
         { text: 'Courses', icon: <SchoolIcon sx={{ fontSize: 22 }} />, path: '/admin/courses' },
+        { text: 'Coupons', icon: <CouponIcon sx={{ fontSize: 22 }} />, path: '/admin/coupons' },
         { text: 'Assignment', icon: <AssignmentTurnedInIcon sx={{ fontSize: 22 }} />, path: '/admin/assignments' },
         {
             text: 'Teachers',

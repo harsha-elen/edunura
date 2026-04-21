@@ -46,6 +46,10 @@ interface CourseAttributes {
     meta_description?: string;
     visibility?: 'draft' | 'published' | 'private';
     is_sequential?: boolean;
+    // Geneo Integration Fields
+    geneo_enabled?: boolean;
+    geneo_class?: string | null;
+    geneo_subject?: string | null;
     created_by: number;
     created_at?: Date;
     updated_at?: Date;
@@ -85,6 +89,9 @@ class Course extends Model<CourseAttributes, CourseCreationAttributes> implement
     public meta_description?: string;
     public visibility?: 'draft' | 'published' | 'private';
     public is_sequential?: boolean;
+    public geneo_enabled?: boolean;
+    public geneo_class?: string | null;
+    public geneo_subject?: string | null;
     public created_by!: number;
 
     public readonly created_at!: Date;
@@ -230,6 +237,21 @@ Course.init(
         is_sequential: {
             type: DataTypes.BOOLEAN,
             defaultValue: false,
+        },
+        geneo_enabled: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false,
+            comment: 'Enable Geneo access for this course',
+        },
+        geneo_class: {
+            type: DataTypes.STRING(50),
+            allowNull: true,
+            comment: 'Class for Geneo integration (1-10)',
+        },
+        geneo_subject: {
+            type: DataTypes.STRING(100),
+            allowNull: true,
+            comment: 'Subject for Geneo integration (maths, physics, science)',
         },
         created_by: {
             type: DataTypes.INTEGER.UNSIGNED,

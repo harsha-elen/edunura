@@ -97,9 +97,13 @@ CREATE TABLE IF NOT EXISTS `courses` (
   `meta_title` varchar(255) DEFAULT NULL,
   `meta_description` text DEFAULT NULL,
   `visibility` enum('draft','published','private') DEFAULT 'draft',
+  `geneo_enabled` tinyint(1) DEFAULT 0 COMMENT 'Enable Geneo access for this course',
+  `geneo_class` varchar(50) DEFAULT NULL COMMENT 'Class for Geneo integration (1-10)',
+  `geneo_subject` varchar(100) DEFAULT NULL COMMENT 'Subject for Geneo integration (maths, physics, science)',
   PRIMARY KEY (`id`),
   UNIQUE KEY `slug` (`slug`),
   KEY `created_by` (`created_by`),
+  KEY `idx_geneo_enabled` (`geneo_enabled`),
   CONSTRAINT `courses_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -351,4 +355,19 @@ CREATE TABLE IF NOT EXISTS `quiz_attempts` (
   KEY `idx_quiz_attempts_student_id` (`student_id`),
   CONSTRAINT `quiz_attempts_ibfk_1` FOREIGN KEY (`lesson_id`) REFERENCES `lessons` (`id`) ON DELETE CASCADE,
   CONSTRAINT `quiz_attempts_ibfk_2` FOREIGN KEY (`student_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Table: geneo_tokens
+CREATE TABLE IF NOT EXISTS `geneo_tokens` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `user_id` int(10) unsigned NOT NULL,
+  `token` varchar(512) NOT NULL,
+  `created_at` datetime DEFAULT current_timestamp(),
+  `expires_at` datetime NOT NULL,
+  `revoked` tinyint(1) DEFAULT 0,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `token` (`token`),
+  KEY `idx_user_id` (`user_id`),
+  KEY `idx_expires_at` (`expires_at`),
+  CONSTRAINT `geneo_tokens_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

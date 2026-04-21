@@ -614,7 +614,7 @@ export const getMyEnrolledCourses = async (req: AuthRequest, res: Response): Pro
                 {
                     model: Course,
                     as: 'course',
-                    attributes: ['id', 'title', 'slug', 'description', 'short_description', 'thumbnail', 'category', 'level', 'total_enrollments', 'rating', 'total_reviews', 'instructors', 'created_by'],
+                    attributes: ['id', 'title', 'slug', 'description', 'short_description', 'thumbnail', 'category', 'level', 'total_enrollments', 'rating', 'total_reviews', 'instructors', 'created_by', 'geneo_enabled', 'geneo_class', 'geneo_subject'],
                 },
             ],
             order: [['enrollment_date', 'DESC']],
@@ -686,6 +686,7 @@ export const getMyEnrolledCourses = async (req: AuthRequest, res: Response): Pro
                     instructors: instructorNames,
                     total_lessons: totalLessons || 0,
                     completed_lessons: completedLessons || 0,
+                    geneo_enabled: course.geneo_enabled || false,
                 };
             })
         );

@@ -84,6 +84,11 @@ services:
       # CORS — allow only the production frontend
       FRONTEND_URL: ${FRONTEND_URL}
 
+      # Geneo SSO
+      GENEO_JWT_SECRET: ${GENEO_JWT_SECRET}
+      GENEO_ISSUER: ${GENEO_ISSUER}
+      GENEO_TOKEN_EXPIRY_HOURS: ${GENEO_TOKEN_EXPIRY_HOURS:-24}
+
       # File Upload limits
       MAX_FILE_SIZE: ${MAX_FILE_SIZE}
       ALLOWED_FILE_TYPES: ${ALLOWED_FILE_TYPES}

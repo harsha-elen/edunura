@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Azure Meridian Admin - Create/Edit Coupon</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-error-container": "#991b1b",
+                    "on-secondary-fixed-variant": "#334155",
+                    "on-secondary-container": "#1e293b",
+                    "primary-container": "#dbeafe",
+                    "secondary-fixed-dim": "#e2e8f0",
+                    "on-error": "#ffffff",
+                    "on-tertiary-fixed-variant": "#6d28d9",
+                    "on-background": "#0f172a",
+                    "outline-variant": "#94a3b8",
+                    "surface": "#ffffff",
+                    "surface-dim": "#f1f3f6",
+                    "surface-variant": "#f1f5f9",
+                    "primary-fixed-dim": "#bfdbfe",
+                    "primary-fixed": "#dbeafe",
+                    "on-primary-container": "#1e40af",
+                    "tertiary-fixed-dim": "#ddd6fe",
+                    "error": "#ef4444",
+                    "on-primary-fixed": "#1e3a8a",
+                    "error-container": "#fee2e2",
+                    "on-tertiary-container": "#4c1d95",
+                    "on-secondary-fixed": "#0f172a",
+                    "secondary-fixed": "#f1f5f9",
+                    "secondary-container": "#f1f5f9",
+                    "surface-tint": "#2b8cee",
+                    "surface-container-highest": "#cbd5e1",
+                    "on-primary-fixed-variant": "#1d4ed8",
+                    "surface-container": "#f1f3f6",
+                    "on-surface": "#0f172a",
+                    "inverse-surface": "#1e293b",
+                    "background": "#f6f7f8",
+                    "surface-container-lowest": "#ffffff",
+                    "on-secondary": "#ffffff",
+                    "surface-container-high": "#e2e8f0",
+                    "primary": "#2b8cee",
+                    "inverse-primary": "#93c5fd",
+                    "surface-container-low": "#f6f7f8",
+                    "outline": "#e2e8f0",
+                    "secondary": "#475569",
+                    "surface-bright": "#ffffff",
+                    "tertiary-container": "#ede9fe",
+                    "on-surface-variant": "#64748b",
+                    "on-tertiary-fixed": "#2e1065",
+                    "on-tertiary": "#ffffff",
+                    "inverse-on-surface": "#f8fafc",
+                    "tertiary-fixed": "#ede9fe",
+                    "tertiary": "#7c3aed",
+                    "on-primary": "#ffffff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "fontFamily": {
+                    "headline": ["Lexend"],
+                    "body": ["Lexend"],
+                    "label": ["Lexend"]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body { font-family: 'Lexend', sans-serif; }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen">
+<!-- TopNavBar -->
+<nav class="fixed top-0 w-full z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md shadow-sm flex justify-between items-center px-8 h-16 w-full">
+<div class="flex items-center gap-4">
+<span class="text-xl font-bold tracking-tight text-blue-600 dark:text-blue-400">Azure Meridian Admin</span>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-slate-600 dark:text-slate-400 cursor-pointer hover:text-blue-500 transition-colors">notifications</span>
+<span class="material-symbols-outlined text-slate-600 dark:text-slate-400 cursor-pointer hover:text-blue-500 transition-colors">settings</span>
+</div>
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline">
+<img alt="Admin Avatar" data-alt="professional portrait of a male administrator in business casual attire with a soft blurred office background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB8lU8auOYepFxGeLoUanfA2SKlACEtl3SMo6HZOdaA1BSdZe73IGhhGdZ6EzP3nqG7jd8xr27I8Ob59kHQyjcGkGXeE5FeQTZ6vJYHaWZOZM9yLuB0Z5VShNGCpbNxfhJqsmENF9SMUBJBLP-9SsMCvJ2g8G6L0MQiG9jir7d0pWGcGS3wL4muHoHN18R2jQBVval62lRxaH4ZH28iNJst4CnJalvnqdDGcnLBLoILrcQF-wOIaH65x2vpsFH9Oicokf_TyVC5xe4a"/>
+</div>
+</div>
+</nav>
+<!-- SideNavBar -->
+<aside class="h-screen w-64 fixed left-0 top-0 pt-16 bg-slate-50 dark:bg-slate-950 border-r border-slate-200/50 dark:border-slate-800/50 hidden md:flex flex-col h-full py-6 px-4">
+<div class="mb-8 px-2">
+<h2 class="text-lg font-bold text-slate-900 dark:text-slate-100">Meridian Admin</h2>
+<p class="text-xs text-slate-500 dark:text-slate-400">Management Portal</p>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:pl-2 transition-all duration-300 rounded-lg group" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-medium text-sm">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:pl-2 transition-all duration-300 rounded-lg group" href="#">
+<span class="material-symbols-outlined">school</span>
+<span class="font-medium text-sm">Courses</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 hover:pl-2 transition-all duration-300 rounded-lg group" href="#">
+<span class="material-symbols-outlined">group</span>
+<span class="font-medium text-sm">Users</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 bg-blue-50/50 dark:bg-blue-900/10 text-blue-600 dark:text-blue-400 border-l-4 border-blue-600 hover:pl-2 transition-all duration-300 rounded-r-lg group" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">confirmation_number</span>
+<span class="font-medium text-sm">Coupons</span>
+</a>
+</nav>
+<div class="mt-auto pt-6 border-t border-slate-200 dark:border-slate-800 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg" href="#">
+<span class="material-symbols-outlined">help</span>
+<span class="font-medium text-sm">Support</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-lg" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span class="font-medium text-sm">Logout</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="md:ml-64 pt-24 pb-12 px-4 md:px-8 flex justify-center">
+<div class="w-full max-w-2xl">
+<!-- Header Section -->
+<div class="mb-8 flex items-center justify-between">
+<div>
+<h1 class="text-2xl font-bold tracking-tight text-slate-900">Create New Coupon</h1>
+<p class="text-on-surface-variant text-sm mt-1">Configure your promotional offering for learners.</p>
+</div>
+</div>
+<!-- Form Card -->
+<div class="bg-surface rounded-xl shadow-sm border border-outline/50 overflow-hidden">
+<!-- Visual Divider using Tonal Shift -->
+<div class="h-1 bg-gradient-to-r from-primary to-tertiary"></div>
+<div class="p-8 space-y-8">
+<!-- Coupon Code Section -->
+<div class="space-y-3">
+<label class="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Coupon Code</label>
+<div class="flex gap-2">
+<div class="relative flex-1">
+<input class="w-full h-12 bg-surface-container-low border-outline border focus:border-primary focus:ring-1 focus:ring-primary rounded-lg px-4 font-bold text-lg tracking-widest placeholder:font-normal placeholder:tracking-normal uppercase" placeholder="e.g. SUMMER2024" type="text"/>
+</div>
+<button class="h-12 px-6 bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-semibold rounded-lg transition-colors flex items-center gap-2 active:scale-95 duration-200">
+<span class="material-symbols-outlined">refresh</span>
+                                Generate
+                            </button>
+</div>
+</div>
+<!-- Applicable Courses Section -->
+<div class="space-y-3">
+<label class="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Applicable Courses</label>
+<div class="relative">
+<div class="w-full min-h-[48px] bg-surface-container-low border-outline border focus-within:border-primary focus-within:ring-1 focus-within:ring-primary rounded-lg px-3 py-2 flex flex-wrap gap-2 cursor-text">
+<div class="bg-primary/10 text-primary px-2 py-1 rounded flex items-center gap-1 text-sm font-medium">
+            Cloud Architecture 101
+            <span class="material-symbols-outlined text-xs cursor-pointer hover:text-blue-700">close</span>
+</div>
+<div class="bg-primary/10 text-primary px-2 py-1 rounded flex items-center gap-1 text-sm font-medium">
+            Python Mastery
+            <span class="material-symbols-outlined text-xs cursor-pointer hover:text-blue-700">close</span>
+</div>
+<input class="flex-1 min-w-[120px] bg-transparent border-none focus:ring-0 p-0 text-sm placeholder:text-on-surface-variant" placeholder="Search and select courses..." type="text"/>
+</div>
+<span class="absolute right-4 top-1/2 -translate-y-1/2 material-symbols-outlined text-on-surface-variant pointer-events-none">expand_more</span>
+</div>
+</div>
+<!-- Discount Config Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="space-y-3">
+<label class="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Discount Type</label>
+<select class="w-full h-12 bg-surface-container-low border-outline border focus:border-primary focus:ring-1 focus:ring-primary rounded-lg px-4 text-[18px]">
+<option>Percentage (%)</option>
+<option>Fixed Amount ($)</option>
+</select>
+</div>
+<div class="space-y-3">
+<label class="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Discount Value</label>
+<div class="relative">
+<input class="w-full h-12 bg-surface-container-low border-outline border focus:border-primary focus:ring-1 focus:ring-primary rounded-lg px-4 text-[18px]" placeholder="0.00" type="number"/>
+<span class="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant font-medium">%</span>
+</div>
+</div>
+</div>
+<!-- Minimum Order & Max Total Uses Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="space-y-3">
+<label class="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Minimum Order Amount</label>
+<div class="relative">
+<span class="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant font-medium">$</span>
+<input class="w-full h-12 bg-surface-container-low border-outline border focus:border-primary focus:ring-1 focus:ring-primary rounded-lg pl-8 pr-4 text-[18px]" placeholder="0.00" type="number"/>
+</div>
+</div>
+<div class="space-y-3">
+<div class="flex items-center justify-between">
+<label class="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Max Total Uses</label>
+<label class="flex items-center gap-2 cursor-pointer group">
+<input class="w-4 h-4 rounded border-outline text-primary focus:ring-primary" type="checkbox"/>
+<span class="text-xs font-medium text-on-surface-variant group-hover:text-on-surface">Unlimited</span>
+</label>
+</div>
+<input class="w-full h-12 bg-surface-container-low border-outline border focus:border-primary focus:ring-1 focus:ring-primary rounded-lg px-4 text-[18px]" placeholder="e.g. 500" type="number"/>
+</div>
+</div>
+<!-- Expiry & Limit -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">
+<div class="space-y-3">
+<div class="flex items-center justify-between">
+<label class="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Expiry Date</label>
+<label class="flex items-center gap-2 cursor-pointer group">
+<input class="w-4 h-4 rounded border-outline text-primary focus:ring-primary" type="checkbox"/>
+<span class="text-xs font-medium text-on-surface-variant group-hover:text-on-surface">No Expiry</span>
+</label>
+</div>
+<input class="w-full h-12 bg-surface-container-low border-outline border focus:border-primary focus:ring-1 focus:ring-primary rounded-lg px-4 text-[18px]" type="date"/>
+</div>
+<div class="space-y-3">
+<label class="text-xs font-bold uppercase tracking-wider text-on-surface-variant">Usage Limit per User</label>
+<input class="w-full h-12 bg-surface-container-low border-outline border focus:border-primary focus:ring-1 focus:ring-primary rounded-lg px-4 text-[18px]" type="number" value="1"/>
+</div>
+</div>
+</div>
+<!-- Action Bar -->
+<div class="bg-surface-container-low p-6 flex flex-col sm:flex-row items-center justify-end gap-3 border-t border-outline/30">
+<button class="w-full sm:w-auto h-12 px-8 bg-transparent border border-outline hover:bg-surface-container-high text-on-surface font-semibold rounded-lg transition-colors active:scale-95 duration-200">
+                        Cancel
+                    </button>
+<button class="w-full sm:w-auto h-12 px-8 bg-primary hover:bg-blue-600 text-white font-semibold rounded-lg shadow-lg shadow-blue-500/20 transition-all active:scale-95 duration-200 flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">save</span>
+                        Save Coupon
+                    </button>
+</div>
+</div>
+<!-- Contextual Help -->
+<div class="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="p-4 bg-white rounded-lg border border-outline/30 flex gap-4 items-start">
+<div class="p-2 bg-blue-50 rounded-lg">
+<span class="material-symbols-outlined text-blue-600">info</span>
+</div>
+<div>
+<h4 class="text-sm font-bold text-slate-900">Best Practice</h4>
+<p class="text-xs text-on-surface-variant mt-1 leading-relaxed">Unique codes like 'WELCOME10' typically see 15% higher conversion than random strings.</p>
+</div>
+</div>
+<div class="p-4 bg-white rounded-lg border border-outline/30 flex gap-4 items-start">
+<div class="p-2 bg-tertiary-container rounded-lg">
+<span class="material-symbols-outlined text-tertiary">lock_reset</span>
+</div>
+<div>
+<h4 class="text-sm font-bold text-slate-900">Security</h4>
+<p class="text-xs text-on-surface-variant mt-1 leading-relaxed">Usage limits prevent bot exploitation and ensure equitable distribution of discounts.</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Visual Polish: Ambient background texture -->
+<div class="fixed inset-0 pointer-events-none -z-10 opacity-30 overflow-hidden">
+<div class="absolute -top-[10%] -left-[5%] w-[40%] h-[40%] bg-primary/10 blur-[120px] rounded-full"></div>
+<div class="absolute -bottom-[10%] -right-[5%] w-[40%] h-[40%] bg-tertiary/5 blur-[120px] rounded-full"></div>
+</div>
+</body></html>

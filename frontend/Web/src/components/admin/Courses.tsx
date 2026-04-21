@@ -37,6 +37,7 @@ import {
     NavigateNext as NavigateNextIcon,
 } from '@mui/icons-material';
 import { getCourses, deleteCourse } from '@/services/courseService';
+import { generateGenoToken } from '@/services/enrollmentService';
 import { STATIC_ASSETS_BASE_URL } from '@/services/apiClient';
 
 const getStatusStyles = (status: string) => {
@@ -70,6 +71,8 @@ const Courses: React.FC = () => {
         message: '',
         severity: 'success',
     });
+    const [geneoLoading, setGeneoLoading] = useState(false);
+    const [geneoError, setGeneoError] = useState<string | null>(null);
 
     useEffect(() => {
         loadCourses();
@@ -145,6 +148,22 @@ const Courses: React.FC = () => {
         setCourseToDelete(null);
     };
 
+    const hasGeneoEnabledCourses = courses.some((course: any) => course.geneo_enabled === true);
+
+    const handleOpenInGeneo = async () => {
+        try {
+            setGeneoLoading(true);
+            setGeneoError(null);
+            const tokenData = await generateGenoToken();
+            window.open(tokenData.sso_url, '_blank', 'noopener,noreferrer');
+        } catch (err: any) {
+            console.error('Error generating Geneo token:', err);
+            setGeneoError(err.response?.data?.message || 'Failed to open Geneo. Please try again.');
+        } finally {
+            setGeneoLoading(false);
+        }
+    };
+
     const getInstructorNames = (instructorsData: any): string => {
         try {
             let instructors = instructorsData;
@@ -203,6 +222,24 @@ const Courses: React.FC = () => {
                     >
                         Create New Course
                     </Button>
+                    {hasGeneoEnabledCourses && (
+                        <Button
+                            variant="contained"
+                            onClick={handleOpenInGeneo}
+                            disabled={geneoLoading}
+                            sx={{
+                                borderRadius: 2,
+                                textTransform: 'none',
+                                fontWeight: 600,
+                                px: 2.5,
+                                py: 1.25,
+                                backgroundColor: '#4F46E5',
+                                '&:hover': { backgroundColor: '#4338CA' },
+                            }}
+                        >
+                            {geneoLoading ? 'Opening Geneo...' : 'Open in Geneo'}
+                        </Button>
+                    )}
                     <Button
                         component={Link}
                         href="/admin/courses/categories"
@@ -313,6 +350,12 @@ const Courses: React.FC = () => {
             {error && !loading && (
                 <Alert severity="error" sx={{ mb: 3 }}>
                     {error}
+                </Alert>
+            )}
+
+            {geneoError && (
+                <Alert severity="error" sx={{ mb: 3 }} onClose={() => setGeneoError(null)}>
+                    {geneoError}
                 </Alert>
             )}
 

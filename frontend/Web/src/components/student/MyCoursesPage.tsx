@@ -24,7 +24,7 @@ import {
 } from '@mui/icons-material';
 import { alpha } from '@mui/material/styles';
 import { useRouter } from 'next/navigation';
-import { getEnrollments } from '@/services/enrollmentService';
+import { getEnrollments, generateGenoToken } from '@/services/enrollmentService';
 import { STATIC_ASSETS_BASE_URL } from '@/services/apiClient';
 
 interface EnrolledCourse {
@@ -40,6 +40,7 @@ interface EnrolledCourse {
     completed_lessons: number;
     progress_percentage: number;
     status: 'active' | 'completed';
+    geneo_enabled?: boolean;
 }
 
 export default function MyCoursesPage() {
@@ -51,6 +52,7 @@ export default function MyCoursesPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [page, setPage] = useState(1);
+    const [geneoLoading, setGeneoLoading] = useState(false);
     const itemsPerPage = 6;
 
     const filters = ['All', 'In Progress', 'Completed'];
@@ -111,6 +113,23 @@ export default function MyCoursesPage() {
         return 'In Progress';
     };
 
+    const hasGeneoEnabledCourses = courses.some(course => course.geneo_enabled === true);
+
+    const handleOpenInGeneo = async () => {
+        try {
+            setGeneoLoading(true);
+            setError(null);
+            const tokenData = await generateGenoToken();
+            // Open Geneo SSO URL in new tab
+            window.open(tokenData.sso_url, '_blank', 'noopener,noreferrer');
+        } catch (err: any) {
+            console.error('Error generating Geneo token:', err);
+            setError(err.response?.data?.message || 'Failed to open Geneo. Please try again.');
+        } finally {
+            setGeneoLoading(false);
+        }
+    };
+
     return (
         <Box component="main" sx={{ flexGrow: 1, p: { xs: 2, md: 3, lg: 4 }, maxWidth: 1440, mx: 'auto', width: '100%' }}>
             {/* Header */}
@@ -125,29 +144,49 @@ export default function MyCoursesPage() {
                         </Typography>
                     </Box>
 
-                    <TextField
-                        placeholder="Search my courses..."
-                        size="small"
-                        value={searchTerm}
-                        onChange={(e) => {
-                            setSearchTerm(e.target.value);
-                            setPage(1);
-                        }}
-                        sx={{
-                            width: { xs: '100%', md: 320 },
-                            '& .MuiOutlinedInput-root': {
-                                borderRadius: 2,
-                                bgcolor: 'background.paper',
-                            },
-                        }}
-                        InputProps={{
-                            startAdornment: (
-                                <InputAdornment position="start">
-                                    <SearchIcon sx={{ color: 'text.disabled' }} />
-                                </InputAdornment>
-                            ),
-                        }}
-                    />
+                    <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, alignItems: 'center' }}>
+                        {hasGeneoEnabledCourses && (
+                            <Button
+                                variant="contained"
+                                onClick={handleOpenInGeneo}
+                                disabled={geneoLoading}
+                                sx={{
+                                    borderRadius: 2,
+                                    textTransform: 'none',
+                                    fontWeight: 600,
+                                    backgroundColor: '#4F46E5',
+                                    '&:hover': {
+                                        backgroundColor: '#4338CA',
+                                    },
+                                }}
+                            >
+                                {geneoLoading ? 'Opening Geneo...' : 'Open in Geneo'}
+                            </Button>
+                        )}
+                        <TextField
+                            placeholder="Search my courses..."
+                            size="small"
+                            value={searchTerm}
+                            onChange={(e) => {
+                                setSearchTerm(e.target.value);
+                                setPage(1);
+                            }}
+                            sx={{
+                                width: { xs: '100%', md: 320 },
+                                '& .MuiOutlinedInput-root': {
+                                    borderRadius: 2,
+                                    bgcolor: 'background.paper',
+                                },
+                            }}
+                            InputProps={{
+                                startAdornment: (
+                                    <InputAdornment position="start">
+                                        <SearchIcon sx={{ color: 'text.disabled' }} />
+                                    </InputAdornment>
+                                ),
+                            }}
+                        />
+                    </Box>
                 </Box>
 
                 {error && (

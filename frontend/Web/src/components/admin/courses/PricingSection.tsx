@@ -2,10 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-    Box, Typography, Button, Paper, TextField,
+    Box, Typography, Paper, TextField,
     Radio, RadioGroup, ToggleButton, ToggleButtonGroup, useTheme, MenuItem
 } from '@mui/material';
-import { Add as AddIcon } from '@mui/icons-material';
 import { getSettings } from '@/services/settings';
 
 interface PricingSectionProps {
@@ -314,36 +313,6 @@ const PricingSection: React.FC<PricingSectionProps> = ({
                 </Box>
             </Paper>
 
-            {/* Coupons Card */}
-            {!isFree && (
-                <Paper sx={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #e7edf3', boxShadow: 'none' }}>
-                    <Box sx={{ p: 3, borderBottom: '1px solid #e7edf3', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Box>
-                            <Typography variant="h6" sx={{ fontWeight: 700, color: '#0d141b' }}>Coupons</Typography>
-                            <Typography variant="body2" sx={{ color: '#4c739a', mt: 0.5 }}>Manage promotional codes for your course.</Typography>
-                        </Box>
-                        <Button
-                            variant="contained"
-                            disabled
-                            startIcon={<AddIcon />}
-                            sx={{
-                                bgcolor: `${theme.palette.primary.main}0D`,
-                                color: theme.palette.primary.main,
-                                textTransform: 'none',
-                                fontWeight: 700,
-                                boxShadow: 'none',
-                            }}
-                        >
-                            Add Coupon
-                        </Button>
-                    </Box>
-                    <Box sx={{ p: 3 }}>
-                        <Typography variant="body2" color="textSecondary" align="center">
-                            Coupon management coming soon.
-                        </Typography>
-                    </Box>
-                </Paper>
-            )}
         </Box>
     );
 };

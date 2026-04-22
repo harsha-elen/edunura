@@ -26,7 +26,7 @@ import { seedAdminIfNeeded } from './scripts/seedAdminUser';
 dotenv.config();
 
 const app: Application = express();
-const PORT = process.env.PORT || 5050;
+const PORT = process.env.PORT || 5000;
 
 // CORS middleware - must be first to apply to all routes including static files
 // Strip any trailing slash and protocol from JITSI_DOMAIN before constructing origin

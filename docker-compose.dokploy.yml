@@ -12,7 +12,7 @@
 #   3. Go to "Environment" tab → paste the filled-in contents of .env.docker.example
 #   4. Deploy
 #   5. Go to "Domains" tab → add your domains:
-#       backend    → api.clientdomain.com             (port 5050)
+#       backend    → api.clientdomain.com             (port 5000)
 #       web-app    → clientdomain.com (or app.*)      (port 3000)
 ##############################################################################
 
@@ -41,7 +41,7 @@ services:
       - lms_internal
 
   # ─── Backend API ───────────────────────────────────────────────────────────
-  # Domain in Dokploy UI: api.edunura.com → port 5050
+  # Domain in Dokploy UI: api.edunura.com → port 5000
   # Volume uploads_data persists course videos, thumbnails, avatars across redeploys
   backend:
     image: harshath/lms-backend:latest
@@ -105,9 +105,9 @@ services:
       # Named volume — survives container replacement, image updates, redeploys
       - uploads_data:/app/uploads
     expose:
-      - "5050"
+      - "5000"
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:5050/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:5000/health"]
       interval: 30s
       timeout: 10s
       retries: 5

@@ -43,8 +43,8 @@ RUN mkdir -p uploads
 
 # Health check
 HEALTHCHECK --interval=15s --timeout=5s --start-period=30s \
-  CMD wget -qO- http://localhost:5000/health || exit 1
+  CMD wget -qO- http://localhost:5050/health || exit 1
 
-EXPOSE 5000
+EXPOSE 5050
 
 CMD ["node", "dist/server.js"]

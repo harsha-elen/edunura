@@ -142,7 +142,7 @@ export interface GenoTokenResponse {
     sso_url: string;
 }
 
-export const generateGenoToken = async (): Promise<GenoTokenResponse> => {
-    const response = await apiClient.post('/geneo/generate-token');
+export const generateGenoToken = async (courseId?: number, mode: string = 'learn'): Promise<GenoTokenResponse> => {
+    const response = await apiClient.post('/geneo/generate-token', { courseId, mode });
     return response.data.data;
 };

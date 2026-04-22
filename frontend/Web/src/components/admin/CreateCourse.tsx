@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useTheme } from '@mui/material/styles';
+import { useTheme, alpha } from '@mui/material/styles';
 import {
     Box,
     Typography,
@@ -21,6 +21,9 @@ import {
     Alert,
     Switch,
     FormControlLabel,
+    Chip,
+    Autocomplete,
+    Checkbox,
 } from '@mui/material';
 import {
     NavigateNext as NavigateNextIcon,
@@ -35,6 +38,8 @@ import {
     Image as ImageIconOutlined,
     Publish as PublishIcon,
     Save as SaveIcon,
+    CheckBoxOutlineBlank as CheckBoxOutlineBlankIcon,
+    CheckBox as CheckBoxIcon,
 } from '@mui/icons-material';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
@@ -102,7 +107,7 @@ const CreateCourse: React.FC<CreateCourseProps> = ({ editCourseId }) => {
     const [isSequential, setIsSequential] = useState(false);
     const [geneoEnabled, setGeneoEnabled] = useState(false);
     const [selectedClass, setSelectedClass] = useState('');
-    const [selectedSubject, setSelectedSubject] = useState('');
+    const [selectedSubject, setSelectedSubject] = useState<string[]>([]);
     const [visibility, setVisibility] = useState<'draft' | 'published'>('draft');
     const [metaTitle, setMetaTitle] = useState('');
     const [metaDescription, setMetaDescription] = useState('');
@@ -273,7 +278,21 @@ const CreateCourse: React.FC<CreateCourseProps> = ({ editCourseId }) => {
                 // Geneo Integration
                 setGeneoEnabled(course.geneo_enabled ?? false);
                 setSelectedClass(course.geneo_class || '');
-                setSelectedSubject(course.geneo_subject || '');
+
+                // Robust parsing of geneo_subject (handles string, JSON string, array, or null)
+                let parsedSubjects: string[] = [];
+                const rawSubject = course.geneo_subject;
+                if (Array.isArray(rawSubject)) {
+                    parsedSubjects = rawSubject;
+                } else if (typeof rawSubject === 'string' && rawSubject.trim()) {
+                    try {
+                        const parsed = JSON.parse(rawSubject);
+                        parsedSubjects = Array.isArray(parsed) ? parsed : [rawSubject];
+                    } catch {
+                        parsedSubjects = [rawSubject];
+                    }
+                }
+                setSelectedSubject(parsedSubjects);
 
                 setCourseId(course.id);
             } catch (error) {
@@ -1455,9 +1474,19 @@ const CreateCourse: React.FC<CreateCourseProps> = ({ editCourseId }) => {
                                                             Subject <span style={{ color: '#dc2626' }}>*</span>
                                                         </Typography>
                                                         <Select
+                                                            multiple
                                                             displayEmpty
                                                             value={selectedSubject}
-                                                            onChange={(e) => setSelectedSubject(e.target.value)}
+                                                            onChange={(e) => {
+                                                                const val = e.target.value;
+                                                                setSelectedSubject(typeof val === 'string' ? val.split(',') : val as string[]);
+                                                            }}
+                                                            renderValue={(selected) => {
+                                                                if (selected.length === 0) {
+                                                                    return <span style={{ color: 'rgba(74, 115, 154, 0.5)' }}>Select subjects</span>;
+                                                                }
+                                                                return selected.join(', ');
+                                                            }}
                                                             fullWidth
                                                             size="small"
                                                             sx={{
@@ -1467,13 +1496,31 @@ const CreateCourse: React.FC<CreateCourseProps> = ({ editCourseId }) => {
                                                                 '&:hover fieldset': { borderColor: '#cbd5e1' },
                                                                 '&.Mui-focused fieldset': { borderColor: theme.palette.primary.main },
                                                             }}
+                                                            MenuProps={{
+                                                                PaperProps: {
+                                                                    sx: {
+                                                                        maxHeight: 300,
+                                                                        borderRadius: 1.5,
+                                                                        mt: 0.5,
+                                                                    }
+                                                                }
+                                                            }}
                                                         >
-                                                            <MenuItem disabled value="">
-                                                                Select a subject
-                                                            </MenuItem>
-                                                            <MenuItem value="maths">Maths</MenuItem>
-                                                            <MenuItem value="physics">Physics</MenuItem>
-                                                            <MenuItem value="science">Science</MenuItem>
+                                                            {[
+                                                                'English Grammar', 'Mathematics', 'Environmental Studies', 'Science',
+                                                                'Social Science', 'History', 'Geography', 'Political Science',
+                                                                'Economics', 'English', 'Computer', 'Hindi', 'Hindi Grammar'
+                                                            ].map((subject) => (
+                                                                <MenuItem key={subject} value={subject} sx={{ py: 0.5 }}>
+                                                                    <Checkbox
+                                                                        checked={selectedSubject.indexOf(subject) > -1}
+                                                                        size="small"
+                                                                        color="primary"
+                                                                        sx={{ mr: 1 }}
+                                                                    />
+                                                                    <Typography sx={{ fontSize: '0.875rem' }}>{subject}</Typography>
+                                                                </MenuItem>
+                                                            ))}
                                                         </Select>
                                                     </Box>
                                                 </Box>

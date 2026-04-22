@@ -38,18 +38,25 @@ POST /api/geneo/verify-token
 
 ```json
 {
-  "userId": 23,
-  "userType": "Student",
+  "uniqueId": "EDU-STU-USER-23",
+  "name": "Harsha Vardhan",
+  "userType": "student",
+  "mode": "learn",
   "classes": ["6", "7"],
-  "subjects": ["physics", "maths"]
+  "subjects": ["Mathematics", "Science"],
+  "subjectCodes": ["M", "S"]
 }
 ```
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `userId` | number | Edunura's internal student ID |
+| `uniqueId` | string | Edunura's internal student ID (format: `EDU-{ROLE}-USER-{id}`) |
+| `name` | string | Full name of the user |
+| `userType` | string | Role of the user (`student`, `teacher`, or `admin`) |
+| `mode` | string | The interaction mode (`learn` or `assess`) |
 | `classes` | string[] | Unique classes the student is enrolled in (Geneo-enabled courses) |
-| `subjects` | string[] | Unique subjects the student is enrolled in (Geneo-enabled courses) |
+| `subjects` | string[] | Unique subject names (e.g., "Mathematics") |
+| `subjectCodes` | string[] | Unique subject shorthand codes (e.g., "M") |
 
 ### Error Responses
 
@@ -83,7 +90,7 @@ POST /api/geneo/verify-token
 | Algorithm | `HS256` |
 | Issuer (`iss`) | `https://api.edunura.in` |
 | Expiry | 24 hours from generation |
-| Payload fields | `profileId` (userId), `name`, `role` (always `3` = Student) |
+| Payload fields | `profileId`, `name`, `role`, `mode` |
 
 > The shared JWT secret (`GENEO_JWT_SECRET`) will be exchanged securely out-of-band.
 

@@ -49,7 +49,7 @@ interface CourseAttributes {
     // Geneo Integration Fields
     geneo_enabled?: boolean;
     geneo_class?: string | null;
-    geneo_subject?: string | null;
+    geneo_subject?: string[] | null;
     created_by: number;
     created_at?: Date;
     updated_at?: Date;
@@ -91,7 +91,7 @@ class Course extends Model<CourseAttributes, CourseCreationAttributes> implement
     public is_sequential?: boolean;
     public geneo_enabled?: boolean;
     public geneo_class?: string | null;
-    public geneo_subject?: string | null;
+    public geneo_subject?: string[] | null;
     public created_by!: number;
 
     public readonly created_at!: Date;
@@ -249,9 +249,9 @@ Course.init(
             comment: 'Class for Geneo integration (1-10)',
         },
         geneo_subject: {
-            type: DataTypes.STRING(100),
+            type: DataTypes.JSON,
             allowNull: true,
-            comment: 'Subject for Geneo integration (maths, physics, science)',
+            comment: 'Subjects for Geneo integration (Mathematics, Science, etc.)',
         },
         created_by: {
             type: DataTypes.INTEGER.UNSIGNED,

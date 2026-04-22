@@ -7,7 +7,7 @@ import dynamic from 'next/dynamic';
 
 const VideoPlayer = dynamic(() => import('@/components/VideoPlayer'), { ssr: false });
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050/api';
 const BACKEND_URL = API_URL.replace(/\/api\/?$/, '');
 
 

@@ -115,11 +115,11 @@ export default function MyCoursesPage() {
 
     const hasGeneoEnabledCourses = courses.some(course => course.geneo_enabled === true);
 
-    const handleOpenInGeneo = async () => {
+    const handleOpenInGeneo = async (courseId?: number, mode: string = 'learn') => {
         try {
             setGeneoLoading(true);
             setError(null);
-            const tokenData = await generateGenoToken();
+            const tokenData = await generateGenoToken(courseId, mode);
             // Open Geneo SSO URL in new tab
             window.open(tokenData.sso_url, '_blank', 'noopener,noreferrer');
         } catch (err: any) {
@@ -145,24 +145,6 @@ export default function MyCoursesPage() {
                     </Box>
 
                     <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 2, alignItems: 'center' }}>
-                        {hasGeneoEnabledCourses && (
-                            <Button
-                                variant="contained"
-                                onClick={handleOpenInGeneo}
-                                disabled={geneoLoading}
-                                sx={{
-                                    borderRadius: 2,
-                                    textTransform: 'none',
-                                    fontWeight: 600,
-                                    backgroundColor: '#4F46E5',
-                                    '&:hover': {
-                                        backgroundColor: '#4338CA',
-                                    },
-                                }}
-                            >
-                                {geneoLoading ? 'Opening Geneo...' : 'Open in Geneo'}
-                            </Button>
-                        )}
                         <TextField
                             placeholder="Search my courses..."
                             size="small"
@@ -439,29 +421,55 @@ export default function MyCoursesPage() {
                                                 {course.completed_lessons} of {course.total_lessons} lessons completed
                                             </Typography>
                                         </Box>
-                                        <Box sx={{ display: 'flex', gap: 1.5, flexShrink: 0 }}>
-                                            <Button
-                                                variant="outlined"
-                                                size="small"
-                                                onClick={() => router.push(`/course/${course.course_id}/learn`)}
-                                                sx={{
-                                                    borderRadius: 1.5,
-                                                    textTransform: 'none',
-                                                    fontWeight: 600,
-                                                    px: 2,
-                                                    py: 0.5,
-                                                    fontSize: '0.875rem',
-                                                    borderColor: theme.palette.divider,
-                                                    color: 'text.primary',
-                                                    whiteSpace: 'nowrap',
-                                                    '&:hover': {
-                                                        borderColor: 'primary.main',
-                                                        color: 'primary.main',
-                                                    },
-                                                }}
-                                            >
-                                                View Details
-                                            </Button>
+                                        <Box sx={{ display: 'flex', gap: 1.5, flexShrink: 0, flexWrap: 'wrap' }}>
+                                            {course.geneo_enabled && (
+                                                <Button
+                                                    variant="contained"
+                                                    size="small"
+                                                    onClick={() => handleOpenInGeneo(course.course_id, 'learn')}
+                                                    disabled={geneoLoading}
+                                                    sx={{
+                                                        borderRadius: 1.5,
+                                                        textTransform: 'none',
+                                                        fontWeight: 600,
+                                                        px: 2,
+                                                        py: 0.5,
+                                                        fontSize: '0.875rem',
+                                                        boxShadow: 'none',
+                                                        whiteSpace: 'nowrap',
+                                                        backgroundColor: '#4F46E5',
+                                                        '&:hover': {
+                                                            backgroundColor: '#4338CA',
+                                                        },
+                                                    }}
+                                                >
+                                                    {geneoLoading ? 'Opening...' : 'Start Learning'}
+                                                </Button>
+                                            )}
+                                            {course.geneo_enabled && (
+                                                <Button
+                                                    variant="outlined"
+                                                    size="small"
+                                                    onClick={() => handleOpenInGeneo(course.course_id, 'assess')}
+                                                    sx={{
+                                                        borderRadius: 1.5,
+                                                        textTransform: 'none',
+                                                        fontWeight: 600,
+                                                        px: 2,
+                                                        py: 0.5,
+                                                        fontSize: '0.875rem',
+                                                        borderColor: theme.palette.divider,
+                                                        color: 'text.primary',
+                                                        whiteSpace: 'nowrap',
+                                                        '&:hover': {
+                                                            borderColor: 'primary.main',
+                                                            color: 'primary.main',
+                                                        },
+                                                    }}
+                                                >
+                                                    Assignment
+                                                </Button>
+                                            )}
                                             <Button
                                                 variant="contained"
                                                 size="small"

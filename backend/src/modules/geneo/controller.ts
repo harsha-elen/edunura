@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { Op } from 'sequelize';
 import jwt from 'jsonwebtoken';
 import { User, Course, Enrollment, GenoToken } from '../../models';
 import { AuthRequest } from '../../middleware/auth';
@@ -8,6 +9,26 @@ const GENEO_ISSUER = process.env.GENEO_ISSUER || 'https://api.edunura.in';
 const TOKEN_EXPIRY_HOURS = parseInt(process.env.GENEO_TOKEN_EXPIRY_HOURS || '24', 10);
 const ORG_CODE = 'EDUNURA-001';
 const SCHOOL_ID = 'EDU-SCH-001-EDUNURA-001';
+
+const GENEO_SUBJECT_CODES: Record<string, string> = {
+    'English Grammar': 'EG',
+    'Mathematics': 'M',
+    'Environmental Studies': 'EVS',
+    'Science': 'S',
+    'Social Science': 'SS',
+    'History': 'HIST',
+    'Geography': 'GEOG',
+    'Political Science': 'PS',
+    'Economics': 'ECO',
+    'English': 'E',
+    'Computer': 'COMP',
+    'Hindi': 'H',
+    'Hindi Grammar': 'HG',
+};
+
+const mapToSubjectCodes = (subjects: string[]): string[] => {
+    return subjects.map(subject => GENEO_SUBJECT_CODES[subject] || subject);
+};
 
 /**
  * Check if a teacher is assigned to any Geneo-enabled course.
@@ -38,6 +59,7 @@ const hasGeneoEnabledCourseForTeacher = async (userId: number): Promise<boolean>
 export const generateGenoToken = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
         const userId = req.userId;
+        const { courseId, mode = 'learn' } = req.body;
 
         if (!userId) {
             res.status(401).json({
@@ -89,35 +111,101 @@ export const generateGenoToken = async (req: AuthRequest, res: Response): Promis
             return;
         }
 
-        // Generate JWT Token
-        const expiresAt = new Date();
-        expiresAt.setHours(expiresAt.getHours() + TOKEN_EXPIRY_HOURS);
-
-        // Geneo role: 1 = Admin, 2 = Teacher, 3 = Student
-        const geneoRole = user.role === 'admin' ? 1 : user.role === 'teacher' ? 2 : 3;
-
-        const jwtPayload = {
-            profileId: userId.toString(),
-            name: `${user.first_name} ${user.last_name}`,
-            role: geneoRole,
-            iss: GENEO_ISSUER,
-            iat: Math.floor(Date.now() / 1000),
-            exp: Math.floor(expiresAt.getTime() / 1000),
-        };
-
-        const token = jwt.sign(jwtPayload, GENEO_SECRET);
-
-        // Store token in database
-        await GenoToken.create({
-            user_id: userId,
-            token,
-            expires_at: expiresAt,
-            revoked: false,
+        // Cleanup: Delete expired or revoked tokens for this user to keep the DB clean
+        await GenoToken.destroy({
+            where: {
+                user_id: userId,
+                [Op.or]: [
+                    { revoked: true },
+                    { expires_at: { [Op.lt]: new Date() } }
+                ]
+            }
         });
+
+        // Check for existing valid token
+        let token: string | null = null;
+        let expiresAt: Date | null = null;
+
+        const existingToken = await GenoToken.findOne({
+            where: {
+                user_id: userId,
+                revoked: false,
+                expires_at: { [Op.gt]: new Date(Date.now() + 5 * 60 * 1000) } // At least 5 mins remaining
+            },
+            order: [['expires_at', 'DESC']]
+        });
+
+        if (existingToken) {
+            try {
+                const decodedToken = jwt.verify(existingToken.token, GENEO_SECRET) as any;
+                if (decodedToken.mode === mode) {
+                    token = existingToken.token;
+                    expiresAt = existingToken.expires_at;
+                }
+            } catch (err) {
+                // Token invalid or mode mismatch, proceed to generate new
+            }
+        }
+        
+        if (!token) {
+            expiresAt = new Date();
+            expiresAt.setHours(expiresAt.getHours() + TOKEN_EXPIRY_HOURS);
+
+            // Geneo role: 1 = Admin, 2 = Teacher, 3 = Student
+            const geneoRole = user.role === 'admin' ? 1 : user.role === 'teacher' ? 2 : 3;
+
+            const jwtPayload = {
+                profileId: userId.toString(),
+                name: `${user.first_name} ${user.last_name}`,
+                role: geneoRole,
+                mode: mode,
+                iss: GENEO_ISSUER,
+                iat: Math.floor(Date.now() / 1000),
+                exp: Math.floor(expiresAt.getTime() / 1000),
+            };
+
+            token = jwt.sign(jwtPayload, GENEO_SECRET);
+
+            // Store token in database
+            await GenoToken.create({
+                user_id: userId,
+                token,
+                expires_at: expiresAt,
+                revoked: false,
+            });
+        }
 
         // Format uid based on role
         const uidPrefix = user.role === 'admin' ? 'EDU-ADM-USER' : user.role === 'teacher' ? 'EDU-TCH-USER' : 'EDU-STU-USER';
         const uid = `${uidPrefix}-${userId}`;
+
+        // Get subject code if courseId is provided
+        let subjectParams = '';
+        if (courseId) {
+            const targetCourse = await Course.findByPk(courseId, {
+                attributes: ['geneo_subject', 'geneo_enabled']
+            });
+
+            if (targetCourse && targetCourse.geneo_enabled && targetCourse.geneo_subject) {
+                let subjects: string[] = [];
+                const rawSubject = targetCourse.geneo_subject as any;
+                if (Array.isArray(rawSubject)) {
+                    subjects = rawSubject;
+                } else if (typeof rawSubject === 'string' && rawSubject.trim()) {
+                    try {
+                        const parsed = JSON.parse(rawSubject);
+                        subjects = Array.isArray(parsed) ? parsed : [rawSubject];
+                    } catch {
+                        subjects = [rawSubject];
+                    }
+                }
+                
+                const codes = mapToSubjectCodes(subjects);
+                if (codes.length > 0) {
+                    subjectParams = `&subject=${codes.join(',')}`;
+                }
+            }
+        }
 
         res.status(200).json({
             status: 'success',
@@ -125,8 +213,9 @@ export const generateGenoToken = async (req: AuthRequest, res: Response): Promis
                 uid,
                 token,
                 userType: user.role,
+                mode,
                 expires_at: expiresAt,
-                sso_url: `https://learn-stage.geneo.in/sso-redirect/edunura?uid=${uid}&token=${token}`,
+                sso_url: `https://learn-stage.geneo.in/sso-redirect/edunura?uid=${uid}&token=${token}${subjectParams}&mode=${mode}`,
             },
         });
     } catch (error: any) {
@@ -196,7 +285,7 @@ export const verifyGenoToken = async (req: Request, res: Response): Promise<void
         }
 
         // 5. Fetch user to determine role
-        const user = await User.findByPk(userId, { attributes: ['id', 'role'] });
+        const user = await User.findByPk(userId, { attributes: ['id', 'role', 'first_name', 'last_name'] });
         if (!user) {
             res.status(403).json({ status: 'error', message: 'User not found' });
             return;
@@ -207,9 +296,13 @@ export const verifyGenoToken = async (req: Request, res: Response): Promise<void
         let geneoSubjects: string[] = [];
 
         if (user.role === 'admin') {
-            // Admin: return ALL classes (1-10) and ALL subjects
+            // Admin: return ALL classes (1-10) and ALL subjects (mapped to codes)
             geneoClasses = ['1','2','3','4','5','6','7','8','9','10'];
-            geneoSubjects = ['Maths', 'Physics', 'Science'];
+            geneoSubjects = [
+                'English Grammar', 'Mathematics', 'Environmental Studies', 'Science',
+                'Social Science', 'History', 'Geography', 'Political Science',
+                'Economics', 'English', 'Computer', 'Hindi', 'Hindi Grammar'
+            ];
         } else if (user.role === 'teacher') {
             // Teachers: check instructors JSON column
             const courses = await Course.findAll({
@@ -221,7 +314,21 @@ export const verifyGenoToken = async (req: Request, res: Response): Promise<void
                 return instructors.some((i: any) => Number(i.id) === userId);
             });
             geneoClasses = [...new Set(teacherCourses.map((c) => c.geneo_class).filter(Boolean))] as string[];
-            geneoSubjects = [...new Set(teacherCourses.map((c) => c.geneo_subject).filter(Boolean))] as string[];
+            
+            const teacherSubjects = teacherCourses.flatMap(c => {
+                const rawSubject = c.geneo_subject as any;
+                if (Array.isArray(rawSubject)) return rawSubject;
+                if (typeof rawSubject === 'string' && rawSubject.trim()) {
+                    try {
+                        const parsed = JSON.parse(rawSubject);
+                        return Array.isArray(parsed) ? parsed : [rawSubject];
+                    } catch {
+                        return [rawSubject];
+                    }
+                }
+                return [];
+            });
+            geneoSubjects = [...new Set(teacherSubjects.filter(Boolean))] as string[];
         } else {
             // Students: check enrollments table
             const enrollments = await Enrollment.findAll({
@@ -235,7 +342,21 @@ export const verifyGenoToken = async (req: Request, res: Response): Promise<void
                 order: [['enrollment_date', 'DESC']],
             });
             geneoClasses = [...new Set(enrollments.map((e: any) => e.course.geneo_class).filter(Boolean))];
-            geneoSubjects = [...new Set(enrollments.map((e: any) => e.course.geneo_subject).filter(Boolean))];
+            
+            const studentSubjects = enrollments.flatMap((e: any) => {
+                const rawSubject = e.course.geneo_subject as any;
+                if (Array.isArray(rawSubject)) return rawSubject;
+                if (typeof rawSubject === 'string' && rawSubject.trim()) {
+                    try {
+                        const parsed = JSON.parse(rawSubject);
+                        return Array.isArray(parsed) ? parsed : [rawSubject];
+                    } catch {
+                        return [rawSubject];
+                    }
+                }
+                return [];
+            });
+            geneoSubjects = [...new Set(studentSubjects.filter(Boolean))];
         }
 
         if (!geneoClasses.length && !geneoSubjects.length) {
@@ -245,6 +366,7 @@ export const verifyGenoToken = async (req: Request, res: Response): Promise<void
 
         const classes = geneoClasses;
         const subjects = geneoSubjects;
+        const subjectCodes = mapToSubjectCodes(geneoSubjects);
 
         // Build uniqueId based on role
         const uidPrefix = user.role === 'admin' ? 'EDU-ADM-USER' : user.role === 'teacher' ? 'EDU-TCH-USER' : 'EDU-STU-USER';
@@ -252,9 +374,12 @@ export const verifyGenoToken = async (req: Request, res: Response): Promise<void
 
         res.status(200).json({
             uniqueId: responseUniqueId,
+            name: `${user.first_name} ${user.last_name}`,
             userType: user.role,
+            mode: decoded.mode || 'learn',
             classes,
             subjects,
+            subjectCodes,
         });
     } catch (error: any) {
         console.error('Error verifying Geneo token:', error);

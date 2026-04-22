@@ -148,11 +148,11 @@ const TeacherCourses: React.FC = () => {
 
     const hasGeneoEnabledCourses = courses.some(course => course.geneo_enabled === true);
 
-    const handleOpenInGeneo = async () => {
+    const handleOpenInGeneo = async (courseId?: number, mode: string = 'learn') => {
         try {
             setGeneoLoading(true);
             setGeneoError(null);
-            const tokenData = await generateGenoToken();
+            const tokenData = await generateGenoToken(courseId, mode);
             window.open(tokenData.sso_url, '_blank', 'noopener,noreferrer');
         } catch (err: any) {
             console.error('Error generating Geneo token:', err);
@@ -182,30 +182,7 @@ const TeacherCourses: React.FC = () => {
                             View and manage your assigned courses.
                         </Typography>
                     </Box>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        {hasGeneoEnabledCourses && (
-                            <Button
-                                variant="contained"
-                                onClick={handleOpenInGeneo}
-                                disabled={geneoLoading}
-                                sx={{
-                                    borderRadius: 2,
-                                    textTransform: 'none',
-                                    fontWeight: 600,
-                                    backgroundColor: '#4F46E5',
-                                    '&:hover': { backgroundColor: '#4338CA' },
-                                }}
-                            >
-                                {geneoLoading ? 'Opening Geneo...' : 'Open in Geneo'}
-                            </Button>
-                        )}
-                        <Chip
-                            label="View Only"
-                            variant="outlined"
-                            color="info"
-                            sx={{ fontWeight: 600 }}
-                        />
-                    </Box>
+                    {/* Geneo and Status removed - contextual buttons are now on cards */}
                 </Box>
 
                 {/* Search & Filter */}
@@ -416,34 +393,76 @@ const TeacherCourses: React.FC = () => {
                                             <Typography sx={{ color: '#4c739a', mb: 2, fontSize: '13px' }}>
                                                 {getInstructorNames(course.instructors)}
                                             </Typography>
-                                            <Box sx={{ mt: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#4c739a' }}>
-                                                    <GroupIcon sx={{ fontSize: 18 }} />
-                                                    <Typography sx={{ fontWeight: 600, fontSize: '13px' }}>
-                                                        {course.enrolledStudents || 0}
-                                                    </Typography>
+                                                <Box sx={{ mt: 'auto', display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#4c739a' }}>
+                                                        <GroupIcon sx={{ fontSize: 18 }} />
+                                                        <Typography sx={{ fontWeight: 600, fontSize: '13px' }}>
+                                                            {course.enrolledStudents || 0}
+                                                        </Typography>
+                                                    </Box>
+
+                                                    {course.geneo_enabled && (
+                                                        <Box sx={{ display: 'flex', gap: 1 }}>
+                                                            <Button
+                                                                variant="contained"
+                                                                size="small"
+                                                                onClick={() => handleOpenInGeneo(course.id, 'learn')}
+                                                                disabled={geneoLoading}
+                                                                sx={{
+                                                                    borderRadius: 1.5,
+                                                                    textTransform: 'none',
+                                                                    fontWeight: 600,
+                                                                    flex: 1,
+                                                                    backgroundColor: '#4F46E5',
+                                                                    '&:hover': { backgroundColor: '#4338CA' },
+                                                                    fontSize: '12px',
+                                                                    py: 0.75,
+                                                                }}
+                                                            >
+                                                                Start Learning
+                                                            </Button>
+                                                            <Button
+                                                                variant="outlined"
+                                                                size="small"
+                                                                onClick={() => handleOpenInGeneo(course.id, 'assess')}
+                                                                sx={{
+                                                                    borderRadius: 1.5,
+                                                                    textTransform: 'none',
+                                                                    fontWeight: 600,
+                                                                    flex: 1,
+                                                                    borderColor: '#e2e8f0',
+                                                                    color: '#0d141b',
+                                                                    fontSize: '12px',
+                                                                    py: 0.75,
+                                                                    '&:hover': { borderColor: '#4F46E5', color: '#4F46E5' },
+                                                                }}
+                                                            >
+                                                                Assignment
+                                                            </Button>
+                                                        </Box>
+                                                    )}
+
+                                                    <Button
+                                                        component={Link}
+                                                        href={`/teacher/courses/${course.id}/manage`}
+                                                        variant="contained"
+                                                        fullWidth
+                                                        sx={{
+                                                            bgcolor: theme.palette.primary.main,
+                                                            color: 'white',
+                                                            fontWeight: 600,
+                                                            py: 1.25,
+                                                            borderRadius: 2,
+                                                            textTransform: 'none',
+                                                            fontSize: '14px',
+                                                            '&:hover': {
+                                                                bgcolor: theme.palette.primary.dark,
+                                                            },
+                                                        }}
+                                                    >
+                                                        Manage Course
+                                                    </Button>
                                                 </Box>
-                                                <Button
-                                                    component={Link}
-                                                    href={`/teacher/courses/${course.id}/manage`}
-                                                    variant="contained"
-                                                    fullWidth
-                                                    sx={{
-                                                        bgcolor: theme.palette.primary.main,
-                                                        color: 'white',
-                                                        fontWeight: 600,
-                                                        py: 1.25,
-                                                        borderRadius: 2,
-                                                        textTransform: 'none',
-                                                        fontSize: '14px',
-                                                        '&:hover': {
-                                                            bgcolor: theme.palette.primary.dark,
-                                                        },
-                                                    }}
-                                                >
-                                                    Manage Course
-                                                </Button>
-                                            </Box>
                                         </Box>
                                     </Box>
                                 </Grid>

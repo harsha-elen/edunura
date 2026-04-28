@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5050/api';
 
 // Extract base URL for static assets (remove /api suffix)
 export const STATIC_ASSETS_BASE_URL = API_BASE_URL.replace(/\/api$/, '');
